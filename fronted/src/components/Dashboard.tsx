@@ -35,7 +35,6 @@ interface DashboardProps {
 export default function Dashboard({ className = '' }: DashboardProps) {
   const { wallet, loading } = useWallet();
 
-  // Redirect to connection if wallet not connected
   if (!wallet.isConnected) {
     return (
       <div className={`flex items-center justify-center min-h-[400px] ${className}`}>
@@ -139,7 +138,7 @@ export default function Dashboard({ className = '' }: DashboardProps) {
                   {formatCarbonAmount(displayData.totalCarbonSaved)}
                 </p>
                 <p className="text-xs text-emerald-600">
-                  vs. car travel
+                  Based on DMRC calculations
                 </p>
               </div>
               <Leaf className="w-8 h-8 text-emerald-600" />

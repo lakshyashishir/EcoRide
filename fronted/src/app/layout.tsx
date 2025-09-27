@@ -16,9 +16,12 @@ export const metadata: Metadata = {
     telephone: false,
   },
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon.ico',
-    apple: '/favicon.ico',
+    icon: [
+      { url: '/ecoride_symbol.png', sizes: '32x32', type: 'image/png' },
+      { url: '/ecoride_symbol.png', sizes: '16x16', type: 'image/png' },
+    ],
+    shortcut: '/ecoride_symbol.png',
+    apple: { url: '/ecoride_symbol.png', sizes: '180x180', type: 'image/png' },
   },
   openGraph: {
     title: 'EcoRide - Sustainable Transit Rewards',
@@ -27,7 +30,7 @@ export const metadata: Metadata = {
     siteName: 'EcoRide',
     images: [
       {
-        url: '/og-image.png',
+        url: '/ecoride_symbol.png',
         width: 1200,
         height: 630,
         alt: 'EcoRide - Sustainable Transit Rewards',
@@ -41,7 +44,7 @@ export const metadata: Metadata = {
     title: 'EcoRide - Sustainable Transit Rewards',
     description: 'Earn GREEN tokens for eco-friendly metro journeys in Delhi',
     creator: '@ecoride',
-    images: ['/og-image.png'],
+    images: ['/ecoride_symbol.png'],
   },
   robots: {
     index: true,
@@ -66,6 +69,10 @@ export default function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <meta name="theme-color" content="#22c55e" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/ecoride_symbol.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/ecoride_symbol.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/ecoride_symbol.png" />
+        <link rel="shortcut icon" href="/ecoride_symbol.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
