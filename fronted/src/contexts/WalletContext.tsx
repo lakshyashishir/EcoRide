@@ -1,26 +1,36 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import {
+  HederaSessionEvent,
+  HederaJsonRpcMethod,
+  DAppConnector,
+  HederaChainId,
+} from '@hashgraph/hedera-wallet-connect';
+import { LedgerId } from '@hashgraph/sdk';
 
 export interface WalletInfo {
   accountId: string;
   balance: string;
   isConnected: boolean;
   provider?: any;
-  walletType?: 'hashpack' | 'walletconnect' | 'blade';
+  walletType?: 'hashpack' | 'walletconnect' | 'blade' | 'kabila';
+  connector?: DAppConnector;
 }
 
 interface WalletContextType {
   wallet: WalletInfo;
   setWallet: (wallet: WalletInfo) => void;
   disconnectWallet: () => void;
-  connectHashPack: () => Promise<void>;
-  connectWalletConnect: () => Promise<void>;
+  connectWallet: () => Promise<void>;
   loading: boolean;
   error: string | null;
+  dAppConnector: DAppConnector | null;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
+
+const PROJECT_ID = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'your-project-id';
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [wallet, setWallet] = useState<WalletInfo>({
@@ -30,141 +40,126 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dAppConnector, setDAppConnector] = useState<DAppConnector | null>(null);
 
-  // Check for existing connection on mount
+  // Initialize DAppConnector on mount
   useEffect(() => {
-    const checkExistingConnection = async () => {
-      const savedConnection = localStorage.getItem('wallet_connected');
-      const savedAccount = localStorage.getItem('wallet_account');
-      const savedType = localStorage.getItem('wallet_type') as WalletInfo['walletType'];
+    const initializeDAppConnector = async () => {
+      try {
+        if (typeof window === 'undefined') return;
 
-      if (savedConnection === 'true' && savedAccount && savedType) {
-        // Attempt to restore connection
-        try {
-          if (savedType === 'hashpack') {
-            // Check if HashPack is still available
-            if (typeof window !== 'undefined' && window.hashconnect) {
-              // Verify connection is still valid
-              const hashconnect = window.hashconnect;
-              const isConnected = await hashconnect.checkConnectionStatus?.() || true;
+        const metadata = {
+          name: 'EcoRide',
+          description: 'Sustainable Metro Rewards Platform',
+          url: window.location.origin,
+          icons: [window.location.origin + '/favicon.ico'],
+        };
 
-              if (isConnected) {
-                setWallet({
-                  accountId: savedAccount,
-                  balance: '0.00 ℏ',
-                  isConnected: true,
-                  walletType: 'hashpack',
-                  provider: hashconnect
-                });
-                      } else {
-                disconnectWallet();
-              }
-            } else {
-              // HashPack not available, clear connection
-              disconnectWallet();
-            }
-          }
-        } catch (error) {
-          disconnectWallet();
-        }
+        const connector = new DAppConnector(
+          metadata,
+          LedgerId.TESTNET,
+          PROJECT_ID,
+          Object.values(HederaJsonRpcMethod),
+          [HederaSessionEvent.ChainChanged, HederaSessionEvent.AccountsChanged],
+          [HederaChainId.Testnet],
+        );
+
+        await connector.init({ logger: 'error' });
+        setDAppConnector(connector);
+
+        console.log('DAppConnector initialized successfully');
+
+      } catch (error) {
+        console.error('Failed to initialize DAppConnector:', error);
+        setError('Failed to initialize wallet connector');
       }
     };
 
-    checkExistingConnection();
+    initializeDAppConnector();
   }, []);
 
-  const connectHashPack = async () => {
+  const connectWallet = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Check if HashPack is available
-      if (typeof window === 'undefined' || !window.hashconnect) {
-        throw new Error('HashPack wallet not found. Please install HashPack extension from Chrome Web Store.');
+      if (!dAppConnector) {
+        throw new Error('Wallet connector not initialized. Please refresh the page and try again.');
       }
 
-      // Initialize HashConnect following Hedera documentation
-      const hashconnect = window.hashconnect;
+      console.log('Opening wallet connection modal...');
 
-      // App metadata for HashPack
-      const appMetadata = {
-        name: 'EcoRide',
-        description: 'Sustainable Metro Rewards Platform',
-        icons: [window.location.origin + '/favicon.ico'],
-        url: window.location.origin
-      };
+      const session = await dAppConnector.openModal();
+      console.log('Connection session:', session);
 
-      // Initialize with proper configuration
-      const initData = await hashconnect.init(appMetadata, 'testnet', false);
+      if (session) {
+        // Extract account information from the session
+        const accounts = session.namespaces?.hedera?.accounts || [];
+        if (accounts.length > 0) {
+          const accountId = accounts[0].split(':')[2]; // Extract account ID from namespace format
 
-      // Connect to HashPack
-      const pairingData = await hashconnect.connectToLocalWallet();
-
-      if (pairingData?.accountIds?.length > 0) {
-        const accountId = pairingData.accountIds[0];
-
-        // Get account balance from Hedera network
-        let balance = '0.00';
-        try {
-          // Query balance using HashPack provider
-          const provider = hashconnect.getProvider();
-          if (provider) {
-            const balanceData = await provider.getAccountBalance(accountId);
-            balance = (balanceData.hbars?.toNumber() || 0).toFixed(2);
+          // Try to detect wallet type from session metadata
+          let walletType: WalletInfo['walletType'] = 'walletconnect';
+          if (session.peer?.metadata?.name?.toLowerCase().includes('hashpack')) {
+            walletType = 'hashpack';
+          } else if (session.peer?.metadata?.name?.toLowerCase().includes('blade')) {
+            walletType = 'blade';
+          } else if (session.peer?.metadata?.name?.toLowerCase().includes('kabila')) {
+            walletType = 'kabila';
           }
-        } catch (balanceError) {
+
+          setWallet({
+            accountId,
+            balance: '0.00 ℏ',
+            isConnected: true,
+            walletType,
+            connector: dAppConnector,
+          });
+
+          console.log('Wallet connected successfully:', accountId, 'Type:', walletType);
+        } else {
+          throw new Error('No accounts found in the connected wallet');
         }
-
-        setWallet({
-          accountId: accountId,
-          balance: balance + ' ℏ',
-          isConnected: true,
-          walletType: 'hashpack',
-          provider: hashconnect
-        });
-
-        // Save to localStorage
-        localStorage.setItem('wallet_connected', 'true');
-        localStorage.setItem('wallet_account', accountId);
-        localStorage.setItem('wallet_type', 'hashpack');
-
       } else {
-        throw new Error('No accounts found in HashPack wallet. Please unlock HashPack and try again.');
+        throw new Error('Connection failed - no session established');
       }
+
     } catch (error: any) {
-      setError(error.message || 'Failed to connect to HashPack wallet');
+      console.error('Wallet connection error:', error);
+
+      // Provide more specific error messages
+      let errorMessage = error.message;
+      if (error.message?.includes('User rejected') || error.message?.includes('rejected')) {
+        errorMessage = 'Connection was rejected. Please accept the connection request in your wallet.';
+      } else if (error.message?.includes('not initialized')) {
+        errorMessage = 'Wallet connector not ready. Please refresh the page and try again.';
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = 'Connection timed out. Please try again and make sure your wallet is unlocked.';
+      }
+
+      setError(errorMessage);
+      setWallet({ accountId: '', balance: '', isConnected: false });
     } finally {
       setLoading(false);
     }
   };
 
-  const connectWalletConnect = async () => {
+  const disconnectWallet = async () => {
     try {
-      setLoading(true);
-      setError(null);
-
-      // For now, we'll focus on HashPack as the primary wallet
-      // WalletConnect integration requires proper Hedera WalletConnect packages
-      throw new Error('WalletConnect integration coming soon. Please use HashPack wallet for now.');
-
-    } catch (error: any) {
-      setError(error.message || 'WalletConnect not available yet');
-    } finally {
-      setLoading(false);
+      // Disconnect from WalletConnect if connected
+      if (dAppConnector && wallet.isConnected) {
+        await dAppConnector.disconnectAll();
+        console.log('Disconnected all wallet sessions');
+      }
+    } catch (error) {
+      console.warn('Error disconnecting from WalletConnect:', error);
     }
-  };
 
-  const disconnectWallet = () => {
     setWallet({
       accountId: '',
       balance: '',
       isConnected: false,
     });
-
-    // Clear localStorage
-    localStorage.removeItem('wallet_connected');
-    localStorage.removeItem('wallet_account');
-    localStorage.removeItem('wallet_type');
 
     setError(null);
   };
@@ -174,10 +169,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       wallet,
       setWallet,
       disconnectWallet,
-      connectHashPack,
-      connectWalletConnect,
+      connectWallet,
       loading,
-      error
+      error,
+      dAppConnector
     }}>
       {children}
     </WalletContext.Provider>

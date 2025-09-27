@@ -20,7 +20,7 @@ import { useWallet } from '@/contexts/WalletContext';
 import { toast } from 'sonner';
 
 interface WalletOption {
-  id: 'hashpack' | 'walletconnect';
+  id: 'hedera-wallets';
   name: string;
   description: string;
   icon: string;
@@ -39,29 +39,20 @@ export default function HederaWalletConnect({ triggerButton, showBalance = true 
   const {
     wallet,
     disconnectWallet,
-    connectHashPack,
-    connectWalletConnect,
+    connectWallet,
     loading,
     error
   } = useWallet();
 
   const walletOptions: WalletOption[] = [
     {
-      id: 'hashpack',
-      name: 'HashPack',
-      description: 'Native Hedera wallet with full HTS support',
+      id: 'hedera-wallets',
+      name: 'Connect Hedera Wallet',
+      description: 'HashPack, Blade, Kabila, and other Hedera wallets',
       icon: '🔗',
       supported: true,
       recommended: true,
-      connectFn: connectHashPack
-    },
-    {
-      id: 'walletconnect',
-      name: 'WalletConnect',
-      description: 'Connect with mobile wallets via QR code',
-      icon: '📱',
-      supported: true,
-      connectFn: connectWalletConnect
+      connectFn: connectWallet
     },
   ];
 
@@ -129,14 +120,14 @@ export default function HederaWalletConnect({ triggerButton, showBalance = true 
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3 mb-4">
-                  <span className="text-2xl">
-                    {wallet.walletType === 'hashpack' ? '🔗' : '📱'}
-                  </span>
+                  <span className="text-2xl">🔗</span>
                   <div>
                     <h3 className="font-semibold">
-                      {wallet.walletType === 'hashpack' ? 'HashPack' : 'WalletConnect'}
+                      {wallet.walletType === 'hashpack' ? 'HashPack' :
+                       wallet.walletType === 'blade' ? 'Blade' :
+                       wallet.walletType === 'kabila' ? 'Kabila' : 'Hedera Wallet'}
                     </h3>
-                    <p className="text-sm text-muted-foreground">Connected</p>
+                    <p className="text-sm text-muted-foreground">Connected via WalletConnect</p>
                   </div>
                   <Badge variant="secondary" className="bg-secondary text-secondary-foreground ml-auto">
                     <CheckCircle className="w-3 h-3 mr-1" />
