@@ -26,6 +26,7 @@ const navigationItems = [
   { id: 'rewards', label: 'Rewards' },
   { id: 'history', label: 'History' },
   { id: 'leaderboard', label: 'Leaderboard' },
+  { id: 'bridge', label: 'Cross-Chain Bridge' },
 ];
 
 export default function Navbar({ onNavigate, currentSection }: NavbarProps) {
@@ -33,7 +34,7 @@ export default function Navbar({ onNavigate, currentSection }: NavbarProps) {
   const { theme, setTheme } = useTheme();
   const { wallet } = useWallet();
 
-  const protectedRoutes = ['dashboard', 'history', 'rewards', 'leaderboard'];
+  const protectedRoutes = ['dashboard', 'history', 'rewards', 'leaderboard', 'bridge'];
 
   const handleNavigation = (section: string) => {
     if (protectedRoutes.includes(section) && !wallet.isConnected) {

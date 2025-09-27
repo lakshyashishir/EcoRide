@@ -11,13 +11,14 @@ import WebsiteRewardsPage from '@/components/pages/WebsiteRewardsPage';
 import WebsiteDashboardPage from '@/components/pages/WebsiteDashboardPage';
 import JourneyHistory from '@/components/JourneyHistory';
 import Leaderboard from '@/components/Leaderboard';
+import CrossChainBridge from '@/components/CrossChainBridge';
 
 export default function Home() {
   const [currentPage, setCurrentPage] = useState('home');
   const { wallet } = useWallet();
 
   // Protected routes that require wallet connection
-  const protectedRoutes = ['dashboard', 'history', 'rewards', 'leaderboard'];
+  const protectedRoutes = ['dashboard', 'history', 'rewards', 'leaderboard', 'bridge'];
 
   const handleNavigation = (page: string) => {
     // If trying to access protected route without wallet, redirect to home
@@ -59,6 +60,14 @@ export default function Home() {
                 <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-8">Community Leaderboard</h1>
                 <Leaderboard onNavigate={handleNavigation} />
               </div>
+            </div>
+          </div>
+        );
+      case 'bridge':
+        return (
+          <div className="min-h-screen bg-card">
+            <div className="container mx-auto px-4 py-12">
+              <CrossChainBridge />
             </div>
           </div>
         );

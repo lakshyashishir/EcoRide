@@ -9,6 +9,7 @@
     "build": "node scripts/build.js",
     "compile": "hardhat compile",
     "deploy": "hardhat run scripts/deploy.js --network hedera-testnet",
+    "deploy:oft": "hardhat run scripts/deploy-layerzero-oft.js --network hedera-testnet",
     "verify": "hardhat verify --network hedera-testnet"
   },
   "keywords": [
@@ -22,6 +23,7 @@
   "license": "MIT",
   "dependencies": {
     "@hashgraph/sdk": "^2.49.2",
+    "@openzeppelin/contracts": "^5.4.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.21.2",

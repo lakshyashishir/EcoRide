@@ -1,4 +1,14 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# EcoRide Frontend
+
+EcoRide is a sustainable transit rewards platform built for the Hedera ecosystem, featuring cross-chain interoperability via LayerZero.
+
+## Features
+
+- 🌱 **GREEN Token Rewards**: Earn tokens for eco-friendly metro journeys
+- 🌉 **Cross-Chain Bridge**: Transfer GREEN tokens across multiple blockchains using LayerZero
+- 🏆 **Leaderboards**: Community rankings and achievements
+- 💳 **Hedera Wallet Integration**: Native wallet support for seamless transactions
+- 📊 **Analytics Dashboard**: Track your environmental impact and rewards
 
 ## Getting Started
 
@@ -16,21 +26,24 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Cross-Chain Bridge
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Access the LayerZero-powered cross-chain bridge at `/bridge` to transfer GREEN tokens between:
+- Hedera Testnet
+- Ethereum Sepolia
+- BSC Testnet
 
-## Learn More
+## Smart Contracts
 
-To learn more about Next.js, take a look at the following resources:
+- **GreenTokenOFT**: `0x00FB10E037C58DcD0AF7911404E67D3124226b53` (Hedera Testnet)
+- **LayerZero Integration**: Cross-chain interoperability for GREEN tokens
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Hedera EVM Track
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This project qualifies for the Hedera EVM Track with:
+- ✅ Smart Contract deployment on Hedera Testnet
+- ✅ LayerZero cross-chain bridge integration
+- ✅ Verified contracts on Hashscan
+- ✅ Production-ready frontend interface
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+For deployment instructions, see `CROSS_CHAIN_SETUP.md`.
