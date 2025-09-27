@@ -18,7 +18,7 @@ import {
   Calendar,
   ArrowUpRight,
 } from 'lucide-react';
-import { useHedera } from '@/hooks/useHedera';
+import { useWallet } from '@/contexts/WalletContext';
 import {
   calculateTotalImpact,
   formatCarbonAmount,
@@ -33,62 +33,47 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ className = '' }: DashboardProps) {
+  const { wallet, loading } = useWallet();
+
+  // Redirect to connection if wallet not connected
+  if (!wallet.isConnected) {
+    return (
+      <div className={`flex items-center justify-center min-h-[400px] ${className}`}>
+        <Card className="p-8 text-center max-w-md mx-auto">
+          <CardContent className="space-y-4">
+            <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
+              <Coins className="w-8 h-8 text-amber-600" />
+            </div>
+            <CardTitle className="text-xl">Connect Your Wallet</CardTitle>
+            <CardDescription>
+              Please connect your wallet to view your dashboard and track your metro journeys.
+            </CardDescription>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const {
-    wallet,
-    journeys,
-    tokenBalance,
-    totalTokens,
-    totalCarbonSaved,
-    totalJourneys,
-    isConnected,
-    isLoading,
-  } = useHedera();
+    journeys = [],
+    totalTokens = 0,
+    totalCarbonSaved = 0,
+    totalJourneys = 0,
+  } = {}; 
 
-  // Mock data for demo when wallet is not connected
-  const mockData = {
-    totalTokens: 1250.75,
-    totalCarbonSaved: 15.2,
-    totalJourneys: 42,
-    journeys: [
-      {
-        id: '1',
-        fromStation: 'Rajiv Chowk',
-        toStation: 'Connaught Place',
-        distance: 2.5,
-        carbonSaved: 0.425,
-        tokensEarned: 4.25,
-        timestamp: new Date(Date.now() - 86400000).toISOString(),
-        hcsMessageId: '0.0.789-1234567890',
-        verified: true,
-      },
-      {
-        id: '2',
-        fromStation: 'Kashmere Gate',
-        toStation: 'Red Fort',
-        distance: 3.2,
-        carbonSaved: 0.544,
-        tokensEarned: 5.44,
-        timestamp: new Date(Date.now() - 172800000).toISOString(),
-        hcsMessageId: '0.0.789-1234567891',
-        verified: true,
-      },
-    ]
-  };
-
-  // Use mock data when wallet is not connected
-  const displayData = isConnected ? {
+  const displayData = {
     totalTokens,
     totalCarbonSaved,
     totalJourneys,
     journeys
-  } : mockData;
+  };
 
   const totalImpact = calculateTotalImpact(displayData.journeys);
   const currentTier = getCarbonTier(displayData.totalCarbonSaved);
   const tierProgress = getTierProgress(displayData.totalCarbonSaved);
   const insights = getCarbonInsights(displayData.totalCarbonSaved, displayData.totalJourneys);
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className={`space-y-6 ${className}`}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -284,7 +269,7 @@ export default function Dashboard({ className = '' }: DashboardProps) {
           </CardContent>
         </Card>
       </div>
-                
+
       {insights.length > 0 && (
         <Card>
           <CardHeader>

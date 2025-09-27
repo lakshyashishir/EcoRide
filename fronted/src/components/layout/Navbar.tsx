@@ -33,7 +33,12 @@ export default function Navbar({ onNavigate, currentSection }: NavbarProps) {
   const { theme, setTheme } = useTheme();
   const { wallet } = useWallet();
 
+  const protectedRoutes = ['dashboard', 'history', 'rewards', 'leaderboard'];
+
   const handleNavigation = (section: string) => {
+    if (protectedRoutes.includes(section) && !wallet.isConnected) {
+      return;
+    }
     onNavigate(section);
     setIsMenuOpen(false);
   };
@@ -43,7 +48,6 @@ export default function Navbar({ onNavigate, currentSection }: NavbarProps) {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
 
-      
           <button
             onClick={() => handleNavigation('home')}
             className="flex items-center space-x-3 text-2xl font-bold text-primary hover:text-primary/80 transition-colors"
@@ -54,28 +58,37 @@ export default function Navbar({ onNavigate, currentSection }: NavbarProps) {
             <span>EcoRide</span>
           </button>
 
-         
           <div className="hidden lg:flex items-center space-x-1">
             {navigationItems.map((item) => {
               const isActive = currentSection === item.id;
+              const isProtected = protectedRoutes.includes(item.id);
+              const isDisabled = isProtected && !wallet.isConnected;
 
               return (
                 <Button
                   key={item.id}
                   variant={isActive ? "default" : "ghost"}
                   onClick={() => handleNavigation(item.id)}
-                  className={`${isActive ? "bg-primary hover:bg-primary/90 text-primary-foreground" : "hover:bg-secondary"}`}
+                  disabled={isDisabled}
+                  className={`${
+                    isActive
+                      ? "bg-primary hover:bg-primary/90 text-primary-foreground"
+                      : isDisabled
+                        ? "opacity-50 cursor-not-allowed hover:bg-transparent"
+                        : "hover:bg-secondary"
+                  }`}
                 >
                   {item.label}
+                  {isProtected && !wallet.isConnected && (
+                    <span className="ml-1 text-xs opacity-70">🔒</span>
+                  )}
                 </Button>
               );
             })}
           </div>
 
-         
           <div className="flex items-center space-x-4">
 
-           
             <Button
               onClick={() => handleNavigation('home')}
               className="hidden md:flex bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-lg"
@@ -84,7 +97,6 @@ export default function Navbar({ onNavigate, currentSection }: NavbarProps) {
               Scan Ticket
             </Button>
 
-            
             <Button
               variant="ghost"
               size="sm"
@@ -96,10 +108,8 @@ export default function Navbar({ onNavigate, currentSection }: NavbarProps) {
               <span className="sr-only">Toggle theme</span>
             </Button>
 
-           
             <HederaWalletConnect showBalance={true} />
 
-        
             <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="sm" className="lg:hidden">
@@ -109,7 +119,6 @@ export default function Navbar({ onNavigate, currentSection }: NavbarProps) {
               <SheetContent side="right" className="w-[300px] sm:w-[400px]">
                 <div className="flex flex-col h-full">
 
-                 
                   <div className="flex items-center justify-between pb-4 border-b">
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
@@ -126,7 +135,6 @@ export default function Navbar({ onNavigate, currentSection }: NavbarProps) {
                     </Button>
                   </div>
 
-                  
                   <div className="mt-4 p-4 bg-secondary rounded-lg border border-border">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Account</span>
@@ -139,29 +147,38 @@ export default function Navbar({ onNavigate, currentSection }: NavbarProps) {
                     </div>
                   </div>
 
-                  
                   <nav className="flex-1 mt-6">
                     <div className="space-y-2">
                       {navigationItems.map((item) => {
                         const isActive = currentSection === item.id;
+                        const isProtected = protectedRoutes.includes(item.id);
+                        const isDisabled = isProtected && !wallet.isConnected;
 
                         return (
                           <Button
                             key={item.id}
                             variant={isActive ? "default" : "ghost"}
+                            disabled={isDisabled}
                             className={`w-full justify-start ${
-                              isActive ? "bg-primary hover:bg-primary/90 text-primary-foreground" : ""
+                              isActive
+                                ? "bg-primary hover:bg-primary/90 text-primary-foreground"
+                                : isDisabled
+                                  ? "opacity-50 cursor-not-allowed"
+                                  : ""
                             }`}
                             onClick={() => handleNavigation(item.id)}
                           >
                             {item.label}
+                            {isProtected && !wallet.isConnected && (
+                              <span className="ml-auto text-xs opacity-70">🔒</span>
+                            )}
                           </Button>
                         );
-                      })}
+                      })
+                    }
                     </div>
                   </nav>
 
-                  
                   <div className="pt-4 border-t space-y-2">
                     <Button
                       variant="ghost"

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { BarChart3, Coins, Leaf, Train, TrendingUp, Award, Clock, Users, Target, Zap } from 'lucide-react';
-import { useHedera } from '@/hooks/useHedera';
+import { useWallet } from '@/contexts/WalletContext';
 import { formatTokenAmount, formatCarbonAmount } from '@/utils/carbonCalculator';
 
 interface WebsiteDashboardPageProps {
@@ -52,21 +52,42 @@ const recentJourneys = [
 ];
 
 export default function WebsiteDashboardPage({ onNavigate }: WebsiteDashboardPageProps) {
-  const { totalTokens, totalCarbonSaved, totalJourneys, isConnected } = useHedera();
+  const { wallet } = useWallet();
 
-  // Mock data for demo when wallet is not connected
-  const mockData = {
-    totalTokens: 1250.75,
-    totalCarbonSaved: 15.2,
-    totalJourneys: 42
+  // Redirect to connection if wallet not connected
+  if (!wallet.isConnected) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="container mx-auto px-4 py-12">
+          <div className="max-w-md mx-auto text-center">
+            <Card className="p-8">
+              <CardContent className="space-y-4">
+                <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto">
+                  <Coins className="w-8 h-8 text-primary" />
+                </div>
+                <CardTitle className="text-2xl text-foreground">Connect Your Wallet</CardTitle>
+                <p className="text-muted-foreground">
+                  Please connect your wallet to view your sustainability dashboard and track your metro journey progress.
+                </p>
+                <Button
+                  onClick={() => onNavigate('home')}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  Go to Home
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const displayData = {
+    totalTokens: 0, 
+    totalCarbonSaved: 0, 
+    totalJourneys: 0 
   };
-
-  // Use mock data when wallet is not connected
-  const displayData = isConnected ? {
-    totalTokens,
-    totalCarbonSaved,
-    totalJourneys
-  } : mockData;
 
   return (
     <div className="min-h-screen bg-background">
@@ -83,10 +104,8 @@ export default function WebsiteDashboardPage({ onNavigate }: WebsiteDashboardPag
           </p>
         </div>
 
-        {/* Key Metrics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
 
-          {/* Total Tokens */}
           <Card className="border-border bg-card shadow-lg">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -106,7 +125,6 @@ export default function WebsiteDashboardPage({ onNavigate }: WebsiteDashboardPag
             </CardContent>
           </Card>
 
-          {/* Carbon Saved */}
           <Card className="border-border bg-card shadow-lg">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -126,7 +144,6 @@ export default function WebsiteDashboardPage({ onNavigate }: WebsiteDashboardPag
             </CardContent>
           </Card>
 
-          {/* Total Journeys */}
           <Card className="border-border bg-card shadow-lg">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -144,7 +161,6 @@ export default function WebsiteDashboardPage({ onNavigate }: WebsiteDashboardPag
             </CardContent>
           </Card>
 
-          {/* Eco Tier */}
           <Card className="border-border bg-card shadow-lg">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -163,10 +179,8 @@ export default function WebsiteDashboardPage({ onNavigate }: WebsiteDashboardPag
           </Card>
         </div>
 
-        {/* Main Content Grid */}
         <div className="grid lg:grid-cols-3 gap-8 mb-12">
 
-          {/* Recent Journeys */}
           <div className="lg:col-span-2">
             <Card className="shadow-lg">
               <CardHeader>
@@ -217,10 +231,8 @@ export default function WebsiteDashboardPage({ onNavigate }: WebsiteDashboardPag
             </Card>
           </div>
 
-          
           <div className="space-y-6">
 
-            {/* Eco Tier Progress */}
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -240,7 +252,6 @@ export default function WebsiteDashboardPage({ onNavigate }: WebsiteDashboardPag
               </CardContent>
             </Card>
 
-            {/* Monthly Stats */}
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -269,12 +280,10 @@ export default function WebsiteDashboardPage({ onNavigate }: WebsiteDashboardPag
               </CardContent>
             </Card>
 
-           
             
           </div>
         </div>
 
-       
 
 
         </div>
