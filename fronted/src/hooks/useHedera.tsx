@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { useWallet } from '@/contexts/WalletContext';
 
 export interface HederaTransaction {
   id: string;
@@ -84,6 +85,8 @@ const demoJourneys: CarbonJourney[] = [
 ];
 
 export const useHedera = () => {
+  const { wallet: walletContext } = useWallet();
+
   const [wallet, setWallet] = useState<UserWallet>({
     accountId: '',
     publicKey: '',
@@ -148,8 +151,8 @@ export const useHedera = () => {
     distance: number;
     qrData: string;
   }) => {
-    if (!wallet.connected) {
-      throw new Error('Wallet not connected');
+    if (!walletContext.isConnected) {
+      throw new Error('Wallet not connected. Please connect your wallet first.');
     }
 
     setIsLoading(true);
@@ -205,10 +208,10 @@ export const useHedera = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [wallet.connected]);
+  }, [walletContext.isConnected]);
 
   const redeemTokens = useCallback(async (amount: number, merchantId: string) => {
-    if (!wallet.connected) {
+    if (!walletContext.isConnected) {
       throw new Error('Wallet not connected');
     }
 
@@ -254,10 +257,10 @@ export const useHedera = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [wallet.connected, tokenBalance]);
+  }, [walletContext.isConnected, tokenBalance]);
 
   const getAccountBalance = useCallback(async () => {
-    if (!wallet.connected) return;
+    if (!walletContext.isConnected) return;
 
     try {
       setIsLoading(true);
@@ -269,7 +272,7 @@ export const useHedera = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [wallet.connected]);
+  }, [walletContext.isConnected]);
 
   useEffect(() => {
     const lastWalletType = localStorage.getItem('ecoride-wallet-type') as 'hashpack' | 'metamask' | null;
@@ -307,6 +310,6 @@ export const useHedera = () => {
     totalTokens: tokenBalance.reduce((sum, token) => sum + token.balance, 0),
     totalCarbonSaved: journeys.reduce((sum, journey) => sum + journey.carbonSaved, 0),
     totalJourneys: journeys.length,
-    isConnected: wallet.connected,
+    isConnected: walletContext.isConnected,
   };
 };

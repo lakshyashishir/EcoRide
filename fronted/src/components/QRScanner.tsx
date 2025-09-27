@@ -5,9 +5,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { QrCode, Camera, Upload, CheckCircle, AlertCircle, Scan } from 'lucide-react';
+import { QrCode, Camera, Upload, CheckCircle, AlertCircle, Scan, Wallet } from 'lucide-react';
 import { calculateCarbonSavings } from '@/utils/carbonCalculator';
 import { useHedera } from '@/hooks/useHedera';
+import { useWallet } from '@/contexts/WalletContext';
 import { toast } from 'sonner';
 import QrScanner from 'qr-scanner';
 
@@ -112,6 +113,7 @@ export default function QRScanner({ onScanSuccess, triggerButton, inline = false
   const streamRef = useRef<MediaStream | null>(null);
   const qrScannerRef = useRef<QrScanner | null>(null);
   const { submitJourney, isLoading: isSubmitting } = useHedera();
+  const { wallet } = useWallet();
 
   const [scanAttempts, setScanAttempts] = useState(0);
 
@@ -388,12 +390,42 @@ export default function QRScanner({ onScanSuccess, triggerButton, inline = false
             </Card>
           )}
 
+          {!wallet.isConnected ? (
+            <Card className="border-orange-200 bg-orange-50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 text-orange-600">
+                  <AlertCircle className="w-5 h-5" />
+                  <span className="text-sm font-medium">Wallet Required</span>
+                </div>
+                <p className="text-xs text-orange-700 mt-1">
+                  Please connect your Hedera wallet to earn rewards for this journey.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-green-200 bg-green-50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 text-green-600">
+                  <Wallet className="w-5 h-5" />
+                  <span className="text-sm font-medium">Wallet Connected</span>
+                </div>
+                <p className="text-xs text-green-700 mt-1">
+                  Account: {wallet.accountId} • Ready to earn rewards!
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="flex gap-2">
             <Button variant="outline" onClick={resetScanner} className="bg-white flex-1" >
               Scan Another
             </Button>
-            <Button onClick={handleSubmitJourney} disabled={isSubmitting} className="flex-1 gradient-green text-white">
-              {isSubmitting ? 'Processing...' : 'Confirm'}
+            <Button
+              onClick={handleSubmitJourney}
+              disabled={isSubmitting || !wallet.isConnected}
+              className="flex-1 gradient-green text-white disabled:opacity-50"
+            >
+              {isSubmitting ? 'Processing...' : !wallet.isConnected ? 'Connect Wallet First' : 'Confirm & Earn Rewards'}
             </Button>
           </div>
         </>

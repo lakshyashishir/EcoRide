@@ -308,6 +308,45 @@
       opacity: 0.7;
     }
   }
+
+  .coin-float {
+    animation: coinFloat 3s ease-in-out infinite;
+  }
+
+  .coin-float-delayed {
+    animation: coinFloat 3s ease-in-out infinite;
+    animation-delay: 1s;
+  }
+
+  @keyframes coinFloat {
+    0%, 100% {
+      transform: translateY(0) rotate(0deg);
+    }
+    25% {
+      transform: translateY(-15px) rotate(90deg);
+    }
+    50% {
+      transform: translateY(-30px) rotate(180deg);
+    }
+    75% {
+      transform: translateY(-15px) rotate(270deg);
+    }
+  }
+
+  .sparkle-animation {
+    animation: sparkle 2s ease-in-out infinite;
+  }
+
+  @keyframes sparkle {
+    0%, 100% {
+      opacity: 0;
+      transform: scale(0);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1) rotate(180deg);
+    }
+  }
 }
 
 @layer base {
