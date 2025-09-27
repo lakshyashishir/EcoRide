@@ -94,7 +94,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       if (session) {
         const accounts = session.namespaces?.hedera?.accounts || [];
         if (accounts.length > 0) {
-          const accountId = accounts[0].split(':')[2]; 
+          const accountId = accounts[0].split(':')[2];
 
           let walletType: WalletInfo['walletType'] = 'walletconnect';
           if (session.peer?.metadata?.name?.toLowerCase().includes('hashpack')) {
@@ -105,9 +105,21 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             walletType = 'kabila';
           }
 
+          let balance = '0.00 ℏ';
+          try {
+            const response = await fetch(`https://testnet.mirrornode.hedera.com/api/v1/accounts/${accountId}`);
+            if (response.ok) {
+              const accountData = await response.json();
+              const hbarBalance = (accountData.balance.balance / 100000000).toFixed(8);
+              balance = `${hbarBalance} ℏ`;
+            }
+          } catch (error) {
+            console.warn('Failed to fetch balance:', error);
+          }
+
           setWallet({
             accountId,
-            balance: '0.00 ℏ',
+            balance,
             isConnected: true,
             walletType,
             connector: dAppConnector,

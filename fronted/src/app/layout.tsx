@@ -1,27 +1,7 @@
 import type { Metadata } from 'next';
-import { Montserrat, Source_Code_Pro, Merriweather } from 'next/font/google';
 import { Toaster } from '@/components/ui/sonner';
 import Providers from '@/components/Providers';
 import './globals.css';
-
-const montserrat = Montserrat({
-  variable: '--font-sans',
-  subsets: ['latin'],
-  display: 'swap',
-});
-
-const sourceCodePro = Source_Code_Pro({
-  variable: '--font-mono',
-  subsets: ['latin'],
-  display: 'swap',
-});
-
-const merriweather = Merriweather({
-  variable: '--font-serif',
-  subsets: ['latin'],
-  weight: ['300', '400', '700'],
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: 'EcoRide - Sustainable Transit Rewards',
@@ -90,7 +70,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body
-        className={`${montserrat.variable} ${sourceCodePro.variable} ${merriweather.variable} font-sans antialiased min-h-screen flex flex-col bg-app`}
+        className={`font-sans antialiased min-h-screen flex flex-col bg-app`}
         suppressHydrationWarning
       >
         <Providers>

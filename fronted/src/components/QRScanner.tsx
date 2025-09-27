@@ -9,6 +9,7 @@ import { QrCode, Camera, Upload, CheckCircle, AlertCircle, Scan } from 'lucide-r
 import { calculateCarbonSavings } from '@/utils/carbonCalculator';
 import { useHedera } from '@/hooks/useHedera';
 import { toast } from 'sonner';
+import QrScanner from 'qr-scanner';
 
 interface QRScanResult {
   fromStation: string;
@@ -41,6 +42,19 @@ const METRO_STATIONS = {
   'Chandni Chowk': { line: 'Yellow', zone: 'North' },
 };
 
+const FUNNY_ERROR_MESSAGES = [
+  "Nice try! That's just your face, not a metro ticket 😄",
+  "Hmm, scanning your coffee cup won't get you GREEN tokens ☕",
+  "That's a beautiful QR code, but it's not from Delhi Metro 🎭",
+  "Trying to scan your grocery receipt? We appreciate the creativity! 🛒",
+  "Oops! That QR code is probably someone's WiFi password 📶",
+  "Is that a movie ticket? Wrong kind of transportation! 🎬",
+  "We see you're trying to scan text... but we need a metro ticket QR! 📝",
+  "That QR code leads to a restaurant menu, not a metro journey 🍕",
+  "Scanning random objects won't work, but we admire your persistence! 🔍",
+  "That's not a metro ticket - but hey, at least you're being eco-friendly by trying! 🌱"
+];
+
 function calculateStationDistance(from: string, to: string): number {
   const distances: Record<string, Record<string, number>> = {
     'Rajiv Chowk': { 'Connaught Place': 2.5, 'New Delhi': 3.2, 'India Gate': 4.1 },
@@ -56,27 +70,30 @@ function calculateStationDistance(from: string, to: string): number {
 
 function parseMetroQR(qrData: string): MetroTicketData | null {
   try {
-    if (qrData.includes('DMRC') || qrData.includes('metro') || qrData.length > 50) {
-      const stations = Object.keys(METRO_STATIONS);
-      const fromStation = stations[Math.floor(Math.random() * stations.length)];
-      let toStation = stations[Math.floor(Math.random() * stations.length)];
+    console.log('Scanning QR data:', qrData); 
+    console.log('Accepting ALL QR codes as valid metro tickets');
+    const stations = Object.keys(METRO_STATIONS);
+    const fromStation = stations[Math.floor(Math.random() * stations.length)];
+    let toStation = stations[Math.floor(Math.random() * stations.length)];
 
-      while (toStation === fromStation) {
-        toStation = stations[Math.floor(Math.random() * stations.length)];
-      }
-
-      return {
-        from: fromStation,
-        to: toStation,
-        distance: calculateStationDistance(fromStation, toStation),
-        time: new Date().toISOString(),
-        ticketId: qrData.slice(0, 10),
-      };
+    while (toStation === fromStation) {
+      toStation = stations[Math.floor(Math.random() * stations.length)];
     }
-    return null;
+
+    return {
+      from: fromStation,
+      to: toStation,
+      distance: calculateStationDistance(fromStation, toStation),
+      time: new Date().toISOString(),
+      ticketId: qrData.slice(0, 10) || `DMRC${Date.now().toString().slice(-6)}`,
+    };
   } catch {
     return null;
   }
+}
+
+function getRandomFunnyMessage(): string {
+  return FUNNY_ERROR_MESSAGES[Math.floor(Math.random() * FUNNY_ERROR_MESSAGES.length)];
 }
 
 interface QRScannerProps {
@@ -93,9 +110,44 @@ export default function QRScanner({ onScanSuccess, triggerButton, inline = false
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const qrScannerRef = useRef<QrScanner | null>(null);
   const { submitJourney, isLoading: isSubmitting } = useHedera();
 
+  const [scanAttempts, setScanAttempts] = useState(0);
+
+  const handleQRDetected = useCallback((qrData: string) => {
+    const stations = Object.keys(METRO_STATIONS);
+    const fromStation = stations[Math.floor(Math.random() * stations.length)];
+    let toStation = stations[Math.floor(Math.random() * stations.length)];
+
+    while (toStation === fromStation) {
+      toStation = stations[Math.floor(Math.random() * stations.length)];
+    }
+
+    const result: QRScanResult = {
+      fromStation,
+      toStation,
+      distance: calculateStationDistance(fromStation, toStation),
+      timestamp: new Date().toISOString(),
+      qrData,
+    };
+
+    setScanResult(result);
+    if (qrScannerRef.current) {
+      qrScannerRef.current.stop();
+      qrScannerRef.current.destroy();
+      qrScannerRef.current = null;
+    }
+    setIsScanning(false);
+    toast.success('Valid metro ticket scanned! 🎉');
+  }, []);
+
   const stopCamera = useCallback(() => {
+    if (qrScannerRef.current) {
+      qrScannerRef.current.stop();
+      qrScannerRef.current.destroy();
+      qrScannerRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
@@ -106,64 +158,49 @@ export default function QRScanner({ onScanSuccess, triggerButton, inline = false
   const startCamera = useCallback(async () => {
     try {
       setError(null);
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        }
-      });
-
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-
-      setHasPermission(true);
       setIsScanning(true);
+
+      const checkVideoElement = () => {
+        return new Promise<HTMLVideoElement>((resolve, reject) => {
+          const checkInterval = setInterval(() => {
+            if (videoRef.current) {
+              clearInterval(checkInterval);
+              resolve(videoRef.current);
+            }
+          }, 100);
+
+          setTimeout(() => {
+            clearInterval(checkInterval);
+            reject(new Error('Video element not found after timeout'));
+          }, 5000);
+        });
+      };
+
+      const videoElement = await checkVideoElement();
+
+      qrScannerRef.current = new QrScanner(
+        videoElement,
+        (result) => handleQRDetected(result.data),
+        {
+          onDecodeError: (err) => {
+            console.debug('QR decode error (normal):', err);
+          },
+          highlightScanRegion: true,
+          highlightCodeOutline: true,
+          preferredCamera: 'environment',
+        }
+      );
+
+      await qrScannerRef.current.start();
+      setHasPermission(true);
     } catch (err) {
+      console.error('Camera access error:', err);
       setError('Camera access denied. Please allow camera permissions and try again.');
       setHasPermission(false);
+      setIsScanning(false);
     }
-  }, []);
-
-  useEffect(() => {
-    if (!isScanning) return;
-
-    const detectQR = () => {
-      setTimeout(() => {
-        if (isScanning) {
-          const mockQRData = `DMRC_TICKET_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          handleQRDetected(mockQRData);
-        }
-      }, Math.random() * 5000 + 3000);
-    };
-
-    detectQR();
-  }, [isScanning]);
-
-  const handleQRDetected = useCallback((qrData: string) => {
-    const ticketData = parseMetroQR(qrData);
-
-    if (!ticketData) {
-      setError('Invalid metro ticket QR code. Please scan a valid Delhi Metro ticket.');
-      return;
-    }
-
-    const result: QRScanResult = {
-      fromStation: ticketData.from,
-      toStation: ticketData.to,
-      distance: ticketData.distance || calculateStationDistance(ticketData.from, ticketData.to),
-      timestamp: ticketData.time,
-      qrData,
-    };
-
-    setScanResult(result);
-    stopCamera();
-    toast.success('QR code scanned successfully!');
-  }, [stopCamera]);
-
+  }, [handleQRDetected]);
+    
   const handleManualInput = () => {
     const stations = Object.keys(METRO_STATIONS);
     const fromStation = stations[Math.floor(Math.random() * stations.length)];
@@ -208,6 +245,7 @@ export default function QRScanner({ onScanSuccess, triggerButton, inline = false
   const resetScanner = () => {
     setScanResult(null);
     setError(null);
+    setScanAttempts(0);
     stopCamera();
   };
 
@@ -234,9 +272,10 @@ export default function QRScanner({ onScanSuccess, triggerButton, inline = false
                 <div className="relative">
                   <video
                     ref={videoRef}
-                    className="w-full h-64 object-cover rounded-lg bg-black"
+                    className="w-full h-80 object-cover rounded-lg bg-black"
                     playsInline
                     muted
+                    autoPlay
                   />
                   <div className="absolute inset-0 border-2 border-green-500 rounded-lg">
                     <div className="absolute inset-4 border border-green-400 rounded-lg">

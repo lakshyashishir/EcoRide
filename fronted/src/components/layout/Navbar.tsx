@@ -33,6 +33,7 @@ export default function Navbar({ onNavigate, currentSection }: NavbarProps) {
   const { theme, setTheme } = useTheme();
   const { wallet } = useWallet();
 
+
   const protectedRoutes = ['dashboard', 'history', 'rewards', 'leaderboard'];
 
   const handleNavigation = (section: string) => {
