@@ -64,6 +64,7 @@ export default function Footer({ className = '' }: FooterProps) {
        
       
 
+        Environmental Impact Summary
         <div className="mt-4">
           <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
             <div className="p-4">
@@ -99,6 +100,7 @@ export default function Footer({ className = '' }: FooterProps) {
           </Card>
         </div>
 
+        {/* Bottom Footer */}
         <div className="mt-8 pt-6 border-t flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
             <span>© {currentYear} EcoRide</span>
@@ -119,10 +121,11 @@ export default function Footer({ className = '' }: FooterProps) {
           </div>
         </div>
 
+        
         <div className="mt-6 pt-4 border-t">
           <div className="text-xs text-muted-foreground text-center space-y-1">
             <p>
-              EcoRide is a demonstration project built for the Hedera Hackathon.
+             EcoRide  is a demonstration project built for the Hedera Hackathon.
               This application is deployed on Hedera Testnet and is not affiliated with Delhi Metro Rail Corporation (DMRC).
             </p>
             <p>

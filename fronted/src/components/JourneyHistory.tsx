@@ -38,21 +38,67 @@ export default function JourneyHistory({
   const [showAll, setShowAll] = useState(false);
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
 
-  if (!isConnected) {
-    return (
-      <Card className={className}>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <History className="w-12 h-12 text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-700 mb-2">
-            Connect Wallet to View History
-          </h3>
-          <p className="text-gray-500 text-center max-w-md">
-            Connect your wallet to see your metro journey history and HCS verification status.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
+  
+  const mockJourneys = [
+    {
+      id: '1',
+      fromStation: 'Rajiv Chowk',
+      toStation: 'Connaught Place',
+      distance: 2.5,
+      carbonSaved: 0.425,
+      tokensEarned: 4.25,
+      timestamp: new Date(Date.now() - 86400000).toISOString(),
+      hcsMessageId: '0.0.789-1234567890',
+      verified: true,
+    },
+    {
+      id: '2',
+      fromStation: 'Kashmere Gate',
+      toStation: 'Red Fort',
+      distance: 3.2,
+      carbonSaved: 0.544,
+      tokensEarned: 5.44,
+      timestamp: new Date(Date.now() - 172800000).toISOString(),
+      hcsMessageId: '0.0.789-1234567891',
+      verified: true,
+    },
+    {
+      id: '3',
+      fromStation: 'New Delhi',
+      toStation: 'India Gate',
+      distance: 4.1,
+      carbonSaved: 0.697,
+      tokensEarned: 6.97,
+      timestamp: new Date(Date.now() - 259200000).toISOString(),
+      hcsMessageId: '0.0.789-1234567892',
+      verified: true,
+    },
+    {
+      id: '4',
+      fromStation: 'AIIMS',
+      toStation: 'Green Park',
+      distance: 1.8,
+      carbonSaved: 0.306,
+      tokensEarned: 3.06,
+      timestamp: new Date(Date.now() - 345600000).toISOString(),
+      hcsMessageId: '0.0.789-1234567893',
+      verified: true,
+    },
+    {
+      id: '5',
+      fromStation: 'Dwarka Mor',
+      toStation: 'Rajouri Garden',
+      distance: 5.2,
+      carbonSaved: 0.884,
+      tokensEarned: 8.84,
+      timestamp: new Date(Date.now() - 432000000).toISOString(),
+      hcsMessageId: '0.0.789-1234567894',
+      verified: true,
+    },
+  ];
+
+  
+  const displayJourneys = isConnected ? journeys : mockJourneys;
 
   if (isLoading) {
     return (
@@ -81,7 +127,7 @@ export default function JourneyHistory({
     );
   }
 
-  if (journeys.length === 0) {
+  if (displayJourneys.length === 0) {
     return (
       <Card className={className}>
         {showHeader && (
@@ -108,13 +154,13 @@ export default function JourneyHistory({
     );
   }
 
-  const sortedJourneys = [...journeys].sort((a, b) => {
+  const sortedJourneys = [...displayJourneys].sort((a, b) => {
     const dateA = new Date(a.timestamp).getTime();
     const dateB = new Date(b.timestamp).getTime();
     return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
   });
 
-  const displayJourneys = maxItems && !showAll
+  const visibleJourneys = maxItems && !showAll
     ? sortedJourneys.slice(0, maxItems)
     : sortedJourneys;
 
@@ -157,7 +203,7 @@ export default function JourneyHistory({
                 Journey History
               </CardTitle>
               <CardDescription>
-                {journeys.length} journey{journeys.length !== 1 ? 's' : ''} with HCS verification
+                {displayJourneys.length} journey{displayJourneys.length !== 1 ? 's' : ''} with HCS verification
               </CardDescription>
             </div>
 
@@ -196,7 +242,7 @@ export default function JourneyHistory({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {displayJourneys.map((journey) => (
+              {visibleJourneys.map((journey) => (
                 <TableRow key={journey.id} className="hover:bg-muted/50">
                   <TableCell>
                     <div className="flex items-center space-x-2">
@@ -289,8 +335,8 @@ export default function JourneyHistory({
           </Table>
         </div>
 
-        {/* Show More/Less Button */}
-        {maxItems && journeys.length > maxItems && (
+        
+        {maxItems && displayJourneys.length > maxItems && (
           <div className="border-t p-4">
             <Button
               variant="outline"
@@ -305,14 +351,14 @@ export default function JourneyHistory({
               ) : (
                 <>
                   <ChevronDown className="w-4 h-4 mr-2" />
-                  Show All {journeys.length} Journeys
+                  Show All {displayJourneys.length} Journeys
                 </>
               )}
             </Button>
           </div>
         )}
 
-        {/* HCS Info */}
+              
         <div className="border-t bg-muted/20 p-4">
           <div className="flex items-start space-x-2">
             <Shield className="w-4 h-4 text-blue-600 mt-0.5" />

@@ -94,7 +94,7 @@ export default function ProcessingPage({ onNavigate }: ProcessingPageProps) {
             <CardContent className="p-6">
               <div className="space-y-6">
 
-                {/* Overall Progress */}
+                
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Overall Progress</span>
@@ -103,7 +103,7 @@ export default function ProcessingPage({ onNavigate }: ProcessingPageProps) {
                   <Progress value={progress} className="h-2" />
                 </div>
 
-                {/* Processing Steps */}
+               
                 <div className="space-y-4">
                   {processingSteps.map((step, index) => {
                     const Icon = step.icon;
@@ -150,7 +150,7 @@ export default function ProcessingPage({ onNavigate }: ProcessingPageProps) {
                   })}
                 </div>
 
-                {/* Processing Info */}
+                
                 <div className="bg-secondary rounded-lg p-4 border border-border">
                   <div className="flex items-start space-x-2">
                     <Blocks className="w-4 h-4 text-chart-2 mt-0.5" />

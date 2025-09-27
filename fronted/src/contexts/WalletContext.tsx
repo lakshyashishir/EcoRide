@@ -42,7 +42,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [dAppConnector, setDAppConnector] = useState<DAppConnector | null>(null);
 
-  // Initialize DAppConnector on mount
   useEffect(() => {
     const initializeDAppConnector = async () => {
       try {
@@ -93,12 +92,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       console.log('Connection session:', session);
 
       if (session) {
-        // Extract account information from the session
         const accounts = session.namespaces?.hedera?.accounts || [];
         if (accounts.length > 0) {
-          const accountId = accounts[0].split(':')[2]; // Extract account ID from namespace format
+          const accountId = accounts[0].split(':')[2]; 
 
-          // Try to detect wallet type from session metadata
           let walletType: WalletInfo['walletType'] = 'walletconnect';
           if (session.peer?.metadata?.name?.toLowerCase().includes('hashpack')) {
             walletType = 'hashpack';
@@ -127,7 +124,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
       console.error('Wallet connection error:', error);
 
-      // Provide more specific error messages
       let errorMessage = error.message;
       if (error.message?.includes('User rejected') || error.message?.includes('rejected')) {
         errorMessage = 'Connection was rejected. Please accept the connection request in your wallet.';
@@ -146,7 +142,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const disconnectWallet = async () => {
     try {
-      // Disconnect from WalletConnect if connected
       if (dAppConnector && wallet.isConnected) {
         await dAppConnector.disconnectAll();
         console.log('Disconnected all wallet sessions');

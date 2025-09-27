@@ -44,28 +44,49 @@ export default function Dashboard({ className = '' }: DashboardProps) {
     isLoading,
   } = useHedera();
 
-  if (!isConnected) {
-    return (
-      <div className={`space-y-6 ${className}`}>
-        <Card className="border-dashed border-2 border-gray-300">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Leaf className="w-12 h-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-700 mb-2">
-              Connect Your Wallet
-            </h3>
-            <p className="text-gray-500 text-center mb-6 max-w-md">
-              Connect your wallet to start tracking your carbon savings and earning GREEN tokens for sustainable metro journeys.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Mock data for demo when wallet is not connected
+  const mockData = {
+    totalTokens: 1250.75,
+    totalCarbonSaved: 15.2,
+    totalJourneys: 42,
+    journeys: [
+      {
+        id: '1',
+        fromStation: 'Rajiv Chowk',
+        toStation: 'Connaught Place',
+        distance: 2.5,
+        carbonSaved: 0.425,
+        tokensEarned: 4.25,
+        timestamp: new Date(Date.now() - 86400000).toISOString(),
+        hcsMessageId: '0.0.789-1234567890',
+        verified: true,
+      },
+      {
+        id: '2',
+        fromStation: 'Kashmere Gate',
+        toStation: 'Red Fort',
+        distance: 3.2,
+        carbonSaved: 0.544,
+        tokensEarned: 5.44,
+        timestamp: new Date(Date.now() - 172800000).toISOString(),
+        hcsMessageId: '0.0.789-1234567891',
+        verified: true,
+      },
+    ]
+  };
 
-  const totalImpact = calculateTotalImpact(journeys);
-  const currentTier = getCarbonTier(totalCarbonSaved);
-  const tierProgress = getTierProgress(totalCarbonSaved);
-  const insights = getCarbonInsights(totalCarbonSaved, totalJourneys);
+  // Use mock data when wallet is not connected
+  const displayData = isConnected ? {
+    totalTokens,
+    totalCarbonSaved,
+    totalJourneys,
+    journeys
+  } : mockData;
+
+  const totalImpact = calculateTotalImpact(displayData.journeys);
+  const currentTier = getCarbonTier(displayData.totalCarbonSaved);
+  const tierProgress = getTierProgress(displayData.totalCarbonSaved);
+  const insights = getCarbonInsights(displayData.totalCarbonSaved, displayData.totalJourneys);
 
   if (isLoading) {
     return (
@@ -106,16 +127,14 @@ export default function Dashboard({ className = '' }: DashboardProps) {
 
   return (
     <div className={`space-y-6 ${className}`}>
-      {/* Key Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Tokens */}
         <Card className="border-green-200 bg-green-50">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-green-600">GREEN Tokens</p>
                 <p className="text-2xl font-bold text-green-700">
-                  {formatTokenAmount(totalTokens)}
+                  {formatTokenAmount(displayData.totalTokens)}
                 </p>
                 <p className="text-xs text-green-600">
                   +{formatTokenAmount(totalImpact.totalTokensEarned)} earned
@@ -126,14 +145,13 @@ export default function Dashboard({ className = '' }: DashboardProps) {
           </CardContent>
         </Card>
 
-        {/* Carbon Saved */}
         <Card className="border-emerald-200 bg-emerald-50">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-emerald-600">Carbon Saved</p>
                 <p className="text-2xl font-bold text-emerald-700">
-                  {formatCarbonAmount(totalCarbonSaved)}
+                  {formatCarbonAmount(displayData.totalCarbonSaved)}
                 </p>
                 <p className="text-xs text-emerald-600">
                   vs. car travel
@@ -144,13 +162,12 @@ export default function Dashboard({ className = '' }: DashboardProps) {
           </CardContent>
         </Card>
 
-        {/* Total Journeys */}
         <Card className="border-blue-200 bg-blue-50">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-blue-600">Metro Journeys</p>
-                <p className="text-2xl font-bold text-blue-700">{totalJourneys}</p>
+                <p className="text-2xl font-bold text-blue-700">{displayData.totalJourneys}</p>
                 <p className="text-xs text-blue-600">
                   {totalImpact.totalDistance.toFixed(1)} km total
                 </p>
@@ -160,7 +177,6 @@ export default function Dashboard({ className = '' }: DashboardProps) {
           </CardContent>
         </Card>
 
-        {/* Eco Tier */}
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -177,9 +193,7 @@ export default function Dashboard({ className = '' }: DashboardProps) {
         </Card>
       </div>
 
-      {/* Progress Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Eco Tier Progress */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -213,7 +227,7 @@ export default function Dashboard({ className = '' }: DashboardProps) {
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Current Progress</p>
-                <p className="font-medium">{formatCarbonAmount(totalCarbonSaved)}</p>
+                <p className="font-medium">{formatCarbonAmount(displayData.totalCarbonSaved)}</p>
               </div>
               {!tierProgress.isMaxTier && (
                 <div>
@@ -225,7 +239,6 @@ export default function Dashboard({ className = '' }: DashboardProps) {
           </CardContent>
         </Card>
 
-        {/* Environmental Impact */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -271,8 +284,7 @@ export default function Dashboard({ className = '' }: DashboardProps) {
           </CardContent>
         </Card>
       </div>
-
-      {/* Insights Section */}
+                
       {insights.length > 0 && (
         <Card>
           <CardHeader>
@@ -316,7 +328,6 @@ export default function Dashboard({ className = '' }: DashboardProps) {
         </Card>
       )}
 
-      {/* Quick Actions */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

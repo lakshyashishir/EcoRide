@@ -18,6 +18,8 @@ import {
   Users,
   Calendar,
   Target,
+  Gift,
+  ArrowRight,
 } from 'lucide-react';
 import { useHedera } from '@/hooks/useHedera';
 import { formatCarbonAmount, formatTokenAmount, getCarbonTier } from '@/utils/carbonCalculator';
@@ -40,6 +42,7 @@ interface LeaderboardProps {
   maxEntries?: number;
 }
 
+// Mock leaderboard data
 const generateMockLeaderboard = (currentUserAccountId?: string): LeaderboardEntry[] => {
   const mockUsers = [
     { name: 'EcoWarrior_Delhi', carbon: 15.2, tokens: 152, journeys: 45 },
@@ -66,11 +69,16 @@ const generateMockLeaderboard = (currentUserAccountId?: string): LeaderboardEntr
   }));
 };
 
+interface LeaderboardPageProps extends LeaderboardProps {
+  onNavigate?: (section: string) => void;
+}
+
 export default function Leaderboard({
   className = '',
   period = 'allTime',
   maxEntries = 10,
-}: LeaderboardProps) {
+  onNavigate,
+}: LeaderboardPageProps) {
   const { wallet, totalCarbonSaved, totalTokens, totalJourneys, isConnected } = useHedera();
   const [selectedPeriod, setSelectedPeriod] = useState<'weekly' | 'monthly' | 'allTime'>(period);
 
@@ -140,35 +148,101 @@ export default function Leaderboard({
     allTime: 'All Time',
   };
 
-  if (!isConnected) {
-    return (
-      <Card className={className}>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <Trophy className="w-12 h-12 text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-700 mb-2">
-            Connect Wallet to View Leaderboard
-          </h3>
-          <p className="text-gray-500 text-center max-w-md">
-            Connect your wallet to see how you rank among eco-conscious commuters.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
+ 
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-amber-600" />
-              Eco-Commuter Leaderboard
+    <div className={`grid lg:grid-cols-4 gap-6 ${className}`}>
+     
+      <div className="lg:col-span-1 space-y-6">
+      
+        <Card className="border-primary bg-primary/5 shadow-lg">
+          <CardContent className="p-6 text-center">
+            <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+              <Coins className="w-8 h-8 text-primary-foreground" />
+            </div>
+            <h2 className="text-2xl font-bold text-primary mb-2">
+              {formatTokenAmount(totalTokens)} GREEN
+            </h2>
+            <p className="text-muted-foreground mb-4">Available to redeem</p>
+            <Button
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={() => onNavigate && onNavigate('home')}
+            >
+              Earn More Tokens
+            </Button>
+          </CardContent>
+        </Card>
+
+       
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Star className="w-5 h-5 text-amber-600" />
+              Your Reward Tier
             </CardTitle>
-            <CardDescription>
-              Top performers in sustainable transportation
-            </CardDescription>
-          </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Badge className="bg-primary text-primary-foreground">Green Starter</Badge>
+              <span className="text-sm text-muted-foreground">
+                {totalTokens}/50 to Eco Warrior
+              </span>
+            </div>
+            <div className="w-full bg-secondary rounded-full h-3">
+              <div
+                className="bg-primary h-3 rounded-full transition-all duration-300"
+                style={{ width: `${Math.min((totalTokens / 50) * 100, 100)}%` }}
+              ></div>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-primary rounded-full"></div>
+                <span>Basic rewards</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-primary rounded-full"></div>
+                <span>5% extra discounts</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+       
+        <Card className="shadow-lg border-green-200 bg-green-50">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Gift className="w-6 h-6 text-green-600" />
+              <h3 className="font-semibold text-green-800">Quick Redeem</h3>
+            </div>
+            <p className="text-sm text-green-700 mb-4">
+              Use your tokens at 50+ partner stores near metro stations
+            </p>
+            <Button
+              variant="outline"
+              className="w-full border-green-300 text-green-700 hover:bg-green-100"
+              onClick={() => onNavigate && onNavigate('rewards')}
+            >
+              View All Offers
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+     
+      <div className="lg:col-span-3">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-amber-600" />
+                  Eco-Commuter Leaderboard
+                </CardTitle>
+                <CardDescription>
+                  Top performers in sustainable transportation
+                </CardDescription>
+              </div>
 
           <div className="flex items-center gap-2">
             {Object.entries(periodLabels).map(([key, label]) => (
@@ -187,7 +261,7 @@ export default function Leaderboard({
       </CardHeader>
 
       <CardContent className="p-0">
-        {/* Top 3 Podium */}
+       
         <div className="p-6 border-b bg-gradient-to-r from-green-50 to-emerald-50">
           <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto">
             {leaderboardData.slice(0, 3).map((entry, index) => {
@@ -229,7 +303,7 @@ export default function Leaderboard({
           </div>
         </div>
 
-        {/* Full Leaderboard Table */}
+       
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -318,7 +392,7 @@ export default function Leaderboard({
           </Table>
         </div>
 
-        {/* Stats Footer */}
+                
         <div className="border-t bg-muted/20 p-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div className="flex items-center space-x-2">
@@ -341,7 +415,9 @@ export default function Leaderboard({
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }

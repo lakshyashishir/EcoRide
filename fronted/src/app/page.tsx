@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
+// import Footer from '@/components/layout/Footer';
 import WebsiteHomePage from '@/components/pages/WebsiteHomePage';
 import ProcessingPage from '@/components/pages/ProcessingPage';
 import SuccessPage from '@/components/pages/SuccessPage';
@@ -30,7 +30,7 @@ export default function Home() {
         return (
           <div className="min-h-screen bg-card">
             <div className="container mx-auto px-4 py-12">
-              <div className="max-w-4xl mx-auto">
+              <div className="max-w-7xl mx-auto">
                 <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-8">Journey History</h1>
                 <JourneyHistory />
               </div>
@@ -41,9 +41,9 @@ export default function Home() {
         return (
           <div className="min-h-screen bg-card">
             <div className="container mx-auto px-4 py-12">
-              <div className="max-w-4xl mx-auto">
+              <div className="max-w-7xl mx-auto">
                 <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-8">Community Leaderboard</h1>
-                <Leaderboard />
+                <Leaderboard onNavigate={setCurrentPage} />
               </div>
             </div>
           </div>
@@ -59,7 +59,7 @@ export default function Home() {
       <main className="flex-1">
         {renderPage()}
       </main>
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }

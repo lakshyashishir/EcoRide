@@ -15,6 +15,7 @@ interface WebsiteHomePageProps {
 export default function WebsiteHomePage({ onNavigate }: WebsiteHomePageProps) {
   const { wallet } = useWallet();
 
+  // Mock data for demo
   const mockTotalTokens = 125.75;
   const mockTotalJourneys = 23;
   const mockTotalCarbonSaved = 15.2;
@@ -41,7 +42,7 @@ export default function WebsiteHomePage({ onNavigate }: WebsiteHomePageProps) {
             {/* Inline QR Scanner below heading */}
             <QRScanner inline onScanSuccess={() => onNavigate('processing')} />
 
-            {/* Stats (optional, shown when connected) */}
+            
             {wallet.isConnected && (
               <div className="grid grid-cols-3 gap-6">
                 <div className="text-center">
@@ -65,41 +66,7 @@ export default function WebsiteHomePage({ onNavigate }: WebsiteHomePageProps) {
       
       
 
-      {/* CTA Section */}
-      <section className="py-12 max-w-5xl mx-auto">
-        <div className="container mx-auto">
-          <Card className="border-0 shadow-xl bg-white">
-            <CardContent className="p-12 text-center">
-              <h2 className="text-4xl font-bold mb-4 text-foreground">
-                Ready to Start Your Sustainable Journey?
-              </h2>
-              <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-                Connect your wallet today and start earning rewards for every metro journey in Delhi
-              </p>
-              {!wallet.isConnected ? (
-                <HederaWalletConnect
-                  triggerButton={
-                    <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90">
-                      <Wallet className="w-5 h-5 mr-2" />
-                      Connect Wallet Now
-                    </Button>
-                  }
-                />
-              ) : (
-                <Button
-                  size="lg"
-                  onClick={() => onNavigate('dashboard')}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  <TrendingUp className="w-5 h-5 mr-2" />
-                  View Your Dashboard
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
+      
     </div>
   );
 }

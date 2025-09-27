@@ -43,6 +43,7 @@ export default function Navbar({ onNavigate, currentSection }: NavbarProps) {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
 
+      
           <button
             onClick={() => handleNavigation('home')}
             className="flex items-center space-x-3 text-2xl font-bold text-primary hover:text-primary/80 transition-colors"
@@ -53,6 +54,7 @@ export default function Navbar({ onNavigate, currentSection }: NavbarProps) {
             <span>EcoRide</span>
           </button>
 
+         
           <div className="hidden lg:flex items-center space-x-1">
             {navigationItems.map((item) => {
               const isActive = currentSection === item.id;
@@ -70,18 +72,19 @@ export default function Navbar({ onNavigate, currentSection }: NavbarProps) {
             })}
           </div>
 
+         
           <div className="flex items-center space-x-4">
 
-            {wallet.isConnected && (
-              <Button
-                onClick={() => handleNavigation('home')}
-                className="hidden md:flex bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-lg"
-              >
-                <QrCode className="w-4 h-4 mr-2" />
-                Scan Ticket
-              </Button>
-            )}
+           
+            <Button
+              onClick={() => handleNavigation('home')}
+              className="hidden md:flex bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-lg"
+            >
+              <QrCode className="w-4 h-4 mr-2" />
+              Scan Ticket
+            </Button>
 
+            
             <Button
               variant="ghost"
               size="sm"
@@ -93,8 +96,10 @@ export default function Navbar({ onNavigate, currentSection }: NavbarProps) {
               <span className="sr-only">Toggle theme</span>
             </Button>
 
+           
             <HederaWalletConnect showBalance={true} />
 
+        
             <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="sm" className="lg:hidden">
@@ -104,6 +109,7 @@ export default function Navbar({ onNavigate, currentSection }: NavbarProps) {
               <SheetContent side="right" className="w-[300px] sm:w-[400px]">
                 <div className="flex flex-col h-full">
 
+                 
                   <div className="flex items-center justify-between pb-4 border-b">
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
@@ -120,20 +126,20 @@ export default function Navbar({ onNavigate, currentSection }: NavbarProps) {
                     </Button>
                   </div>
 
-                  {wallet.isConnected && (
-                    <div className="mt-4 p-4 bg-secondary rounded-lg border border-border">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Account</span>
-                        <div className="flex items-center space-x-2">
-                          <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                          <span className="font-bold text-foreground text-xs">
-                            {wallet.accountId.slice(0, 8)}...
-                          </span>
-                        </div>
+                  
+                  <div className="mt-4 p-4 bg-secondary rounded-lg border border-border">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Account</span>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                        <span className="font-bold text-foreground text-xs">
+                          {wallet.isConnected ? wallet.accountId.slice(0, 8) + '...' : '0.0.123456...'}
+                        </span>
                       </div>
                     </div>
-                  )}
+                  </div>
 
+                  
                   <nav className="flex-1 mt-6">
                     <div className="space-y-2">
                       {navigationItems.map((item) => {
@@ -155,6 +161,7 @@ export default function Navbar({ onNavigate, currentSection }: NavbarProps) {
                     </div>
                   </nav>
 
+                  
                   <div className="pt-4 border-t space-y-2">
                     <Button
                       variant="ghost"

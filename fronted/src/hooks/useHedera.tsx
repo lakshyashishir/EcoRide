@@ -38,6 +38,51 @@ export interface CarbonJourney {
   verified: boolean;
 }
 
+const demoTokenBalance: TokenBalance[] = [
+  {
+    tokenId: '0.0.123456',
+    symbol: 'GREEN',
+    balance: 1250.75,
+    decimals: 2,
+  },
+];
+
+const demoJourneys: CarbonJourney[] = [
+  {
+    id: '1',
+    fromStation: 'Rajiv Chowk',
+    toStation: 'Connaught Place',
+    distance: 2.5,
+    carbonSaved: 0.425,
+    tokensEarned: 4.25,
+    timestamp: new Date(Date.now() - 86400000).toISOString(),
+    hcsMessageId: '0.0.789-1234567890',
+    verified: true,
+  },
+  {
+    id: '2',
+    fromStation: 'Kashmere Gate',
+    toStation: 'Red Fort',
+    distance: 3.2,
+    carbonSaved: 0.544,
+    tokensEarned: 5.44,
+    timestamp: new Date(Date.now() - 172800000).toISOString(),
+    hcsMessageId: '0.0.789-1234567891',
+    verified: true,
+  },
+  {
+    id: '3',
+    fromStation: 'New Delhi',
+    toStation: 'India Gate',
+    distance: 4.1,
+    carbonSaved: 0.697,
+    tokensEarned: 6.97,
+    timestamp: new Date(Date.now() - 259200000).toISOString(),
+    hcsMessageId: '0.0.789-1234567892',
+    verified: true,
+  },
+];
+
 export const useHedera = () => {
   const [wallet, setWallet] = useState<UserWallet>({
     accountId: '',
@@ -46,57 +91,11 @@ export const useHedera = () => {
     type: null,
   });
 
-  const [tokenBalance, setTokenBalance] = useState<TokenBalance[]>([]);
+  const [tokenBalance, setTokenBalance] = useState<TokenBalance[]>(demoTokenBalance);
   const [transactions, setTransactions] = useState<HederaTransaction[]>([]);
-  const [journeys, setJourneys] = useState<CarbonJourney[]>([]);
+  const [journeys, setJourneys] = useState<CarbonJourney[]>(demoJourneys);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Simulated data for demo purposes
-  const demoTokenBalance: TokenBalance[] = [
-    {
-      tokenId: '0.0.123456',
-      symbol: 'GREEN',
-      balance: 1250.75,
-      decimals: 2,
-    },
-  ];
-
-  const demoJourneys: CarbonJourney[] = [
-    {
-      id: '1',
-      fromStation: 'Rajiv Chowk',
-      toStation: 'Connaught Place',
-      distance: 2.5,
-      carbonSaved: 0.425,
-      tokensEarned: 4.25,
-      timestamp: new Date(Date.now() - 86400000).toISOString(),
-      hcsMessageId: '0.0.789-1234567890',
-      verified: true,
-    },
-    {
-      id: '2',
-      fromStation: 'Kashmere Gate',
-      toStation: 'Red Fort',
-      distance: 3.2,
-      carbonSaved: 0.544,
-      tokensEarned: 5.44,
-      timestamp: new Date(Date.now() - 172800000).toISOString(),
-      hcsMessageId: '0.0.789-1234567891',
-      verified: true,
-    },
-    {
-      id: '3',
-      fromStation: 'New Delhi',
-      toStation: 'India Gate',
-      distance: 4.1,
-      carbonSaved: 0.697,
-      tokensEarned: 6.97,
-      timestamp: new Date(Date.now() - 259200000).toISOString(),
-      hcsMessageId: '0.0.789-1234567892',
-      verified: true,
-    },
-  ];
 
   const connectWallet = useCallback(async (walletType: 'hashpack' | 'metamask') => {
     setIsLoading(true);
@@ -163,8 +162,8 @@ export const useHedera = () => {
         throw new Error('Journey submission failed. Please try again.');
       }
 
-      const carbonSaved = journeyData.distance * 0.138; // kg CO2 saved vs car
-      const tokensEarned = carbonSaved * 10; // 10 tokens per kg CO2
+      const carbonSaved = journeyData.distance * 0.138; 
+      const tokensEarned = carbonSaved * 10; 
 
       const newJourney: CarbonJourney = {
         id: Date.now().toString(),
@@ -264,7 +263,6 @@ export const useHedera = () => {
       setIsLoading(true);
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Balance already managed in state
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch balance');
@@ -273,7 +271,6 @@ export const useHedera = () => {
     }
   }, [wallet.connected]);
 
-  // Auto-connect on component mount if previously connected
   useEffect(() => {
     const lastWalletType = localStorage.getItem('ecoride-wallet-type') as 'hashpack' | 'metamask' | null;
     const wasConnected = localStorage.getItem('ecoride-wallet-connected') === 'true';
@@ -283,7 +280,6 @@ export const useHedera = () => {
     }
   }, [connectWallet]);
 
-  // Persist wallet connection status
   useEffect(() => {
     if (wallet.connected && wallet.type) {
       localStorage.setItem('ecoride-wallet-type', wallet.type);
@@ -295,7 +291,6 @@ export const useHedera = () => {
   }, [wallet.connected, wallet.type]);
 
   return {
-    // State
     wallet,
     tokenBalance,
     transactions,
@@ -303,14 +298,12 @@ export const useHedera = () => {
     isLoading,
     error,
 
-    // Actions
     connectWallet,
     disconnectWallet,
     submitJourney,
     redeemTokens,
     getAccountBalance,
 
-    // Computed values
     totalTokens: tokenBalance.reduce((sum, token) => sum + token.balance, 0),
     totalCarbonSaved: journeys.reduce((sum, journey) => sum + journey.carbonSaved, 0),
     totalJourneys: journeys.length,

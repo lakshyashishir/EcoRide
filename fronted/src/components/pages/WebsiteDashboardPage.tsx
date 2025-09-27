@@ -54,26 +54,24 @@ const recentJourneys = [
 export default function WebsiteDashboardPage({ onNavigate }: WebsiteDashboardPageProps) {
   const { totalTokens, totalCarbonSaved, totalJourneys, isConnected } = useHedera();
 
-  if (!isConnected) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center max-w-lg">
-          <BarChart3 className="w-24 h-24 text-muted-foreground mx-auto mb-8" />
-          <h2 className="text-3xl font-bold text-foreground mb-4">Connect Your Wallet</h2>
-          <p className="text-muted-foreground mb-8 text-lg">
-            Connect your wallet to view your sustainability dashboard and track your metro journey rewards.
-          </p>
-          <Button onClick={() => onNavigate('home')} className="bg-primary text-primary-foreground hover:bg-primary/90" size="lg">
-            Go to Home
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // Mock data for demo when wallet is not connected
+  const mockData = {
+    totalTokens: 1250.75,
+    totalCarbonSaved: 15.2,
+    totalJourneys: 42
+  };
+
+  // Use mock data when wallet is not connected
+  const displayData = isConnected ? {
+    totalTokens,
+    totalCarbonSaved,
+    totalJourneys
+  } : mockData;
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-12">
+        <div className="max-w-7xl mx-auto">
 
         {/* Page Header */}
         <div className="mb-12">
@@ -95,7 +93,7 @@ export default function WebsiteDashboardPage({ onNavigate }: WebsiteDashboardPag
                 <div>
                   <p className="text-sm font-medium text-primary mb-1">Total GREEN Tokens</p>
                   <p className="text-3xl font-bold text-primary">
-                    {formatTokenAmount(totalTokens)}
+                    {formatTokenAmount(displayData.totalTokens)}
                   </p>
                   <p className="text-xs text-primary mt-1">
                     +12.5 this week
@@ -115,7 +113,7 @@ export default function WebsiteDashboardPage({ onNavigate }: WebsiteDashboardPag
                 <div>
                   <p className="text-sm font-medium text-secondary-foreground mb-1">Carbon Saved</p>
                   <p className="text-3xl font-bold text-secondary-foreground">
-                    {formatCarbonAmount(totalCarbonSaved)}
+                    {formatCarbonAmount(displayData.totalCarbonSaved)}
                   </p>
                   <p className="text-xs text-secondary-foreground mt-1">
                     vs. car travel
@@ -134,7 +132,7 @@ export default function WebsiteDashboardPage({ onNavigate }: WebsiteDashboardPag
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-chart-2 mb-1">Metro Journeys</p>
-                  <p className="text-3xl font-bold text-chart-2">{totalJourneys}</p>
+                  <p className="text-3xl font-bold text-chart-2">{displayData.totalJourneys}</p>
                   <p className="text-xs text-chart-2 mt-1">
                     127.3 km total
                   </p>
@@ -219,7 +217,7 @@ export default function WebsiteDashboardPage({ onNavigate }: WebsiteDashboardPag
             </Card>
           </div>
 
-          {/* Side Panel */}
+          
           <div className="space-y-6">
 
             {/* Eco Tier Progress */}
@@ -271,62 +269,15 @@ export default function WebsiteDashboardPage({ onNavigate }: WebsiteDashboardPag
               </CardContent>
             </Card>
 
-            {/* Quick Actions */}
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-chart-3" />
-                  Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button
-                  variant="outline"
-                  onClick={() => onNavigate('rewards')}
-                  className="w-full justify-start"
-                >
-                  <Award className="w-4 h-4 mr-2" />
-                  View Rewards
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => onNavigate('leaderboard')}
-                  className="w-full justify-start"
-                >
-                  <Users className="w-4 h-4 mr-2" />
-                  Leaderboard
-                </Button>
-              </CardContent>
-            </Card>
+           
+            
           </div>
         </div>
 
-        {/* Environmental Impact */}
-        <Card className="shadow-lg border-border bg-card">
-          <CardContent className="p-8">
-            <div className="grid md:grid-cols-4 gap-8 items-center">
-              <div className="md:col-span-1">
-                <h3 className="text-2xl font-bold text-foreground mb-2">Your Environmental Impact</h3>
-                <p className="text-muted-foreground">Making Delhi's air cleaner, one journey at a time</p>
-              </div>
-              <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div className="text-center">
-                  <p className="text-3xl font-bold text-primary">3.2</p>
-                  <p className="text-sm text-primary">Trees equivalent planted</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-3xl font-bold text-chart-2">68%</p>
-                  <p className="text-sm text-chart-2">Less emissions vs car</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-3xl font-bold text-chart-4">127.3km</p>
-                  <p className="text-sm text-chart-4">Sustainable distance</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+       
 
+
+        </div>
       </div>
     </div>
   );

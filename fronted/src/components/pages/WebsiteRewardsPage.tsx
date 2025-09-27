@@ -1,11 +1,10 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Gift, MapPin, Clock, Star, Coins, Coffee, ShoppingBag, Utensils, Fuel, Award, Users } from 'lucide-react';
+import { Gift, MapPin, Clock, Star, Coffee, ShoppingBag, Utensils, Fuel, Award } from 'lucide-react';
 import { useHedera } from '@/hooks/useHedera';
 import { formatTokenAmount } from '@/utils/carbonCalculator';
 
@@ -98,61 +97,19 @@ export default function WebsiteRewardsPage({ onNavigate }: WebsiteRewardsPagePro
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-12">
+        <div className="max-w-7xl mx-auto">
 
+        {/* Page Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-foreground mb-4">
-            Redeem Your GREEN Tokens
+            Partner Store Rewards
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Use your earned tokens at partner stores near Delhi Metro stations and enjoy exclusive discounts
+            Discover exclusive offers and redeem your GREEN tokens at partner stores near Delhi Metro stations
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-12">
-          <Card className="border-border bg-card shadow-lg">
-            <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                <Coins className="w-8 h-8 text-primary-foreground" />
-              </div>
-              <h2 className="text-3xl font-bold text-primary mb-2">
-                {formatTokenAmount(totalTokens)} GREEN
-              </h2>
-              <p className="text-muted-foreground">Available to redeem</p>
-              <Button className="mt-4 bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => onNavigate('home')}>
-                Earn More Tokens
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-xl flex items-center gap-2">
-                <Star className="w-6 h-6 text-chart-3" />
-                Your Reward Tier
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Badge className="bg-primary text-primary-foreground text-sm px-3 py-1">Green Starter</Badge>
-                <span className="text-sm text-muted-foreground">
-                  {totalTokens}/50 to Eco Warrior
-                </span>
-              </div>
-              <Progress value={(totalTokens / 50) * 100} className="h-3" />
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-primary rounded-full"></div>
-                  <span>Basic rewards</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-primary rounded-full"></div>
-                  <span>5% extra discounts</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
+        {/* Featured Stores */}
         <div className="mb-12">
           <h2 className="text-3xl font-bold text-foreground mb-8 flex items-center gap-3">
             <Gift className="w-8 h-8 text-chart-3" />
@@ -213,6 +170,7 @@ export default function WebsiteRewardsPage({ onNavigate }: WebsiteRewardsPagePro
           </div>
         </div>
 
+        {/* All Partner Stores */}
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
@@ -267,7 +225,9 @@ export default function WebsiteRewardsPage({ onNavigate }: WebsiteRewardsPagePro
             </div>
           </div>
 
+          {/* Sidebar */}
           <div className="space-y-6">
+            {/* Tier Benefits */}
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -296,6 +256,7 @@ export default function WebsiteRewardsPage({ onNavigate }: WebsiteRewardsPagePro
               </CardContent>
             </Card>
 
+            {/* How to Redeem */}
             <Card className="shadow-lg border-border bg-secondary">
               <CardContent className="p-6">
                 <div className="flex items-start space-x-3">
@@ -313,21 +274,10 @@ export default function WebsiteRewardsPage({ onNavigate }: WebsiteRewardsPagePro
               </CardContent>
             </Card>
 
-            <Card className="shadow-lg border-border bg-secondary">
-              <CardContent className="p-6 text-center">
-                <Users className="w-8 h-8 text-chart-4 mx-auto mb-3" />
-                <h3 className="font-semibold text-foreground mb-2">Partner with Us</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Join our network of sustainable businesses
-                </p>
-                <Button size="sm" variant="outline">
-                  Learn More
-                </Button>
-              </CardContent>
-            </Card>
           </div>
         </div>
 
+        </div>
       </div>
     </div>
   );
