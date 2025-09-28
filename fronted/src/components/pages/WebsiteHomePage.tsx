@@ -7,6 +7,8 @@ import { Leaf, QrCode, Scan, Wallet, TrendingUp, Award, Users, Shield, ArrowRigh
 import QRScanner from '@/components/QRScanner';
 import HederaWalletConnect from '@/components/HederaWalletConnect';
 import { useWallet } from '@/contexts/WalletContext';
+import { useHedera } from '@/hooks/useHedera';
+import { formatTokenAmount, formatCarbonAmount } from '@/utils/carbonCalculator';
 
 interface WebsiteHomePageProps {
   onNavigate: (section: string) => void;
@@ -14,11 +16,7 @@ interface WebsiteHomePageProps {
 
 export default function WebsiteHomePage({ onNavigate }: WebsiteHomePageProps) {
   const { wallet } = useWallet();
-
-  // Mock data for demo
-  const mockTotalTokens = 125.75;
-  const mockTotalJourneys = 23;
-  const mockTotalCarbonSaved = 15.2;
+  const { totalTokens, totalJourneys, totalCarbonSaved } = useHedera();
 
   return (
     <div className="min-h-screen bg-card">
@@ -46,15 +44,15 @@ export default function WebsiteHomePage({ onNavigate }: WebsiteHomePageProps) {
             {wallet.isConnected && (
               <div className="grid grid-cols-3 gap-6">
                 <div className="text-center">
-                  <p className="text-3xl font-bold text-primary">{mockTotalTokens}</p>
+                  <p className="text-3xl font-bold text-primary">{formatTokenAmount(totalTokens)}</p>
                   <p className="text-sm text-muted-foreground">GREEN Tokens</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-3xl font-bold text-chart-2">{mockTotalJourneys}</p>
+                  <p className="text-3xl font-bold text-chart-2">{totalJourneys}</p>
                   <p className="text-sm text-muted-foreground">Metro Journeys</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-3xl font-bold text-chart-3">{mockTotalCarbonSaved}kg</p>
+                  <p className="text-3xl font-bold text-chart-3">{formatCarbonAmount(totalCarbonSaved)}</p>
                   <p className="text-sm text-muted-foreground">CO₂ Saved</p>
                 </div>
               </div>

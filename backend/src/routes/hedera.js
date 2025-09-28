@@ -3,6 +3,7 @@ const router = express.Router();
 const hederaService = require('../services/hederaService');
 const tokenService = require('../services/hedera/tokenService');
 const consensusService = require('../services/hedera/consensusService');
+const contractService = require('../services/hedera/contractService');
 const mirrorNodeService = require('../services/hedera/mirrorNodeService');
 const carbonCalculator = require('../services/carbonCalculator');
 const { body, validationResult } = require('express-validator');
@@ -104,8 +105,8 @@ router.post('/journey',
         body('journeyId').notEmpty().withMessage('Journey ID is required'),
         body('fromStation').notEmpty().withMessage('From station is required'),
         body('toStation').notEmpty().withMessage('To station is required'),
-        body('distance').isInt({ min: 100 }).withMessage('Distance must be at least 100 meters'),
-        body('carbonSaved').isInt({ min: 1 }).withMessage('Carbon savings must be positive (from metro ticket)'),
+        body('distance').isNumeric({ min: 0.1 }).withMessage('Distance must be at least 0.1 km'),
+        body('carbonSaved').isNumeric({ min: 1 }).withMessage('Carbon savings must be positive (from metro ticket)'),
         body('userAddress').notEmpty().withMessage('User wallet address is required'),
         body('journeyTimestamp').optional().isISO8601().withMessage('Invalid journey timestamp')
     ],
@@ -120,23 +121,48 @@ router.post('/journey',
                 });
             }
 
-            const { journeyId, fromStation, toStation, distance, carbonSaved, userAddress, journeyTimestamp } = req.body;
+            const { journeyId, fromStation, toStation, distance, carbonSaved, userAddress, journeyTimestamp, qrHash } = req.body;
+
+            // Calculate tokens earned based on carbon saved (carbon saved in grams, convert to kg and multiply by 10)
+            const tokensEarned = Math.floor((carbonSaved / 1000) * 10);
 
             const journeyData = {
                 journeyId,
                 fromStation,
                 toStation,
                 distance,
-                carbonSaved, // CO2 data from metro ticket
+                carbonSaved, // CO2 data from metro ticket (in grams)
+                tokensEarned,
                 userAddress,
-                journeyTimestamp: journeyTimestamp || new Date().toISOString()
+                journeyTimestamp: journeyTimestamp || new Date().toISOString(),
+                qrCodeHash: qrHash || `qr_${Date.now()}`
             };
 
             // Submit to HCS for immutable record
             const hcsResult = await consensusService.submitJourneyRecord(journeyData);
 
-            // Process through smart contract (accepts CO2 data directly)
-            const contractResult = await hederaService.recordJourneyWithCarbonData(journeyData);
+            // Use smart contract to record journey (non-blocking)
+            let contractResult = null;
+            try {
+                contractResult = await contractService.recordJourney(journeyData);
+                console.log(`✅ Smart contract recording succeeded`);
+            } catch (contractError) {
+                console.error(`❌ Smart contract recording failed: ${contractError.message}`);
+                contractResult = { error: contractError.message, status: 'FAILED' };
+                // Continue anyway - HCS recording succeeded and we'll mint tokens directly
+            }
+
+            // DIRECT TOKEN MINTING: Mint GREEN2 tokens directly to user
+            // This is the primary token distribution method
+            let tokenMintResult = null;
+            try {
+                const carbonSavedKg = carbonSaved / 1000; // Convert grams to kg
+                tokenMintResult = await tokenService.mintTokensForCarbonSavings(carbonSavedKg, userAddress);
+                console.log(`✅ Directly minted ${tokenMintResult.tokensMinted} GREEN2 tokens to ${userAddress}`);
+            } catch (tokenError) {
+                console.error(`❌ Direct token minting failed: ${tokenError.message}`);
+                // Continue anyway - HCS recording still succeeded
+            }
 
             res.json({
                 success: true,
@@ -144,7 +170,8 @@ router.post('/journey',
                 data: {
                     journey: journeyData,
                     hcs: hcsResult,
-                    contract: contractResult
+                    contract: contractResult,
+                    tokenMinting: tokenMintResult
                 }
             });
 
@@ -299,16 +326,87 @@ router.get('/token/info', async (req, res) => {
     }
 });
 
+// Force create new token route
+router.post('/token/create-new', async (req, res) => {
+    try {
+        // Force create new token regardless of existing one
+        const newTokenId = await tokenService.createGreenToken(true);
+        res.json({
+            success: true,
+            message: `Successfully created new GREEN token`,
+            data: {
+                tokenId: newTokenId,
+                treasuryAccount: process.env.HEDERA_TREASURY_ACCOUNT_ID
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Mint initial supply route
+router.post('/token/mint-initial', async (req, res) => {
+    try {
+        const { amount = 1000000 } = req.body; // Default 1M tokens
+
+        const result = await tokenService.mintInitialSupply(amount);
+        res.json({
+            success: true,
+            message: `Successfully minted ${amount} GREEN tokens to treasury`,
+            data: result
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 router.get('/token/balance/:accountId', async (req, res) => {
     try {
         const { accountId } = req.params;
         const balance = await tokenService.getTokenBalance(accountId);
+        const isAssociated = await tokenService.isTokenAssociated(accountId);
+
         res.json({
             success: true,
             data: {
                 accountId,
                 balance,
-                tokenSymbol: process.env.GREEN_TOKEN_SYMBOL || 'GREEN'
+                tokenSymbol: process.env.GREEN_TOKEN_SYMBOL || 'GREEN',
+                tokenId: tokenService.getGreenTokenId(),
+                isAssociated
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Get token association status
+router.get('/token/association/:accountId', async (req, res) => {
+    try {
+        const { accountId } = req.params;
+        const isAssociated = await tokenService.isTokenAssociated(accountId);
+        const tokenId = tokenService.getGreenTokenId();
+
+        res.json({
+            success: true,
+            data: {
+                accountId,
+                tokenId,
+                isAssociated,
+                tokenSymbol: process.env.GREEN_TOKEN_SYMBOL || 'GREEN',
+                message: isAssociated
+                    ? 'Account is associated with GREEN token'
+                    : 'Account must associate with GREEN token before receiving rewards'
             }
         });
     } catch (error) {
@@ -338,6 +436,9 @@ router.get('/topic/info', async (req, res) => {
 router.get('/topic/messages', async (req, res) => {
     try {
         const { limit = 10, order = 'desc' } = req.query;
+
+        // Initialize the consensus service to load topic ID from environment
+        await consensusService.initialize();
         const topicId = consensusService.getJourneyTopicId();
 
         if (!topicId) {
@@ -442,6 +543,9 @@ router.get('/mirror/token-transfers/:accountId', async (req, res) => {
 router.get('/analytics/user/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
+
+        // Initialize the consensus service to load topic ID from environment
+        await consensusService.initialize();
         const topicId = consensusService.getJourneyTopicId();
 
         if (!topicId) {
@@ -466,6 +570,8 @@ router.get('/analytics/user/:userId', async (req, res) => {
 
 router.get('/analytics/system', async (req, res) => {
     try {
+        // Initialize the consensus service to load topic ID from environment
+        await consensusService.initialize();
         const topicId = consensusService.getJourneyTopicId();
 
         if (!topicId) {

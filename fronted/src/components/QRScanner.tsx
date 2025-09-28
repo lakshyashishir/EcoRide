@@ -71,8 +71,6 @@ function calculateStationDistance(from: string, to: string): number {
 
 function parseMetroQR(qrData: string): MetroTicketData | null {
   try {
-    console.log('Scanning QR data:', qrData); 
-    console.log('Accepting ALL QR codes as valid metro tickets');
     const stations = Object.keys(METRO_STATIONS);
     const fromStation = stations[Math.floor(Math.random() * stations.length)];
     let toStation = stations[Math.floor(Math.random() * stations.length)];
@@ -184,9 +182,7 @@ export default function QRScanner({ onScanSuccess, triggerButton, inline = false
         videoElement,
         (result) => handleQRDetected(result.data),
         {
-          onDecodeError: (err) => {
-            console.debug('QR decode error (normal):', err);
-          },
+          onDecodeError: () => {}, // Ignore decode errors
           highlightScanRegion: true,
           highlightCodeOutline: true,
           preferredCamera: 'environment',

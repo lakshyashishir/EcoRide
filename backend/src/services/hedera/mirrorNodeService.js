@@ -148,11 +148,9 @@ al
      */
     async getTokenTransfers(accountId, tokenId = null, limit = 25) {
         try {
+            // Note: Mirror Node API doesn't support token.id filter in transactions endpoint
+            // We'll fetch all CRYPTOTRANSFER transactions and filter client-side
             let url = `${this.baseUrl}${this.apiVersion}/transactions?account.id=${accountId}&transactiontype=cryptotransfer&limit=${limit}`;
-
-            if (tokenId) {
-                url += `&token.id=${tokenId}`;
-            }
 
             console.log(`Fetching token transfers from: ${url}`);
 
@@ -163,9 +161,19 @@ al
             }
 
             const data = await response.json();
-            return data.transactions
-                .filter(tx => tx.token_transfers && tx.token_transfers.length > 0)
-                .map(tx => this.formatTokenTransferData(tx));
+            let transactions = data.transactions || [];
+
+            // Filter for transactions that have token transfers
+            transactions = transactions.filter(tx => tx.token_transfers && tx.token_transfers.length > 0);
+
+            // If tokenId is specified, filter for that specific token
+            if (tokenId) {
+                transactions = transactions.filter(tx =>
+                    tx.token_transfers.some(transfer => transfer.token_id === tokenId)
+                );
+            }
+
+            return transactions.map(tx => this.formatTokenTransferData(tx));
         } catch (error) {
             console.error(`❌ Failed to get token transfers for account ${accountId}:`, error.message);
             throw new Error(`Token transfers query failed: ${error.message}`);

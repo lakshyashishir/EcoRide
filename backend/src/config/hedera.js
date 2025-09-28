@@ -1,4 +1,4 @@
-const { Client, AccountId, PrivateKey, AccountBalanceQuery } = require("@hashgraph/sdk");
+const { Client, AccountId, PrivateKey, AccountBalanceQuery, Hbar } = require("@hashgraph/sdk");
 require('dotenv').config();
 
 class HederaConfig {
@@ -16,16 +16,16 @@ class HederaConfig {
       this.validateEnvironment();
 
       this.operatorAccountId = AccountId.fromString(process.env.HEDERA_OPERATOR_ACCOUNT_ID);
-      this.operatorPrivateKey = PrivateKey.fromString(process.env.HEDERA_OPERATOR_PRIVATE_KEY);
+      this.operatorPrivateKey = PrivateKey.fromStringECDSA(process.env.HEDERA_OPERATOR_PRIVATE_KEY);
 
       this.treasuryAccountId = AccountId.fromString(process.env.HEDERA_TREASURY_ACCOUNT_ID);
-      this.treasuryPrivateKey = PrivateKey.fromString(process.env.HEDERA_TREASURY_PRIVATE_KEY);
+      this.treasuryPrivateKey = PrivateKey.fromStringECDSA(process.env.HEDERA_TREASURY_PRIVATE_KEY);
 
       this.client = Client.forTestnet();
       this.client.setOperator(this.operatorAccountId, this.operatorPrivateKey);
 
-      this.client.setDefaultMaxTransactionFee(100); // 1 HBAR
-      this.client.setDefaultMaxQueryPayment(50); // 0.5 HBAR
+      this.client.setDefaultMaxTransactionFee(new Hbar(1)); // 1 HBAR
+      this.client.setDefaultMaxQueryPayment(new Hbar(0.5)); // 0.5 HBAR
 
 
       return this.client;
@@ -57,8 +57,8 @@ class HederaConfig {
     }
 
     try {
-      PrivateKey.fromString(process.env.HEDERA_OPERATOR_PRIVATE_KEY);
-      PrivateKey.fromString(process.env.HEDERA_TREASURY_PRIVATE_KEY);
+      PrivateKey.fromStringECDSA(process.env.HEDERA_OPERATOR_PRIVATE_KEY);
+      PrivateKey.fromStringECDSA(process.env.HEDERA_TREASURY_PRIVATE_KEY);
     } catch (error) {
       throw new Error('Invalid private key format in environment variables');
     }

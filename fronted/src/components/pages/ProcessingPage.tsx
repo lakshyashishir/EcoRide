@@ -8,6 +8,13 @@ import { Check, Clock, Zap, Blocks, Globe, Coins, Sparkles, Leaf } from 'lucide-
 
 interface ProcessingPageProps {
   onNavigate: (section: string) => void;
+  journeyData?: {
+    carbonSaved: number; // in grams
+    tokensEarned: number;
+    fromStation?: string;
+    toStation?: string;
+    distance?: number;
+  };
 }
 
 const processingSteps = [
@@ -48,7 +55,7 @@ const processingSteps = [
   },
 ];
 
-export default function ProcessingPage({ onNavigate }: ProcessingPageProps) {
+export default function ProcessingPage({ onNavigate, journeyData }: ProcessingPageProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
   const [showMintingEffect, setShowMintingEffect] = useState(false);
@@ -77,8 +84,8 @@ export default function ProcessingPage({ onNavigate }: ProcessingPageProps) {
           
             let tokenCount = 0;
             let carbonCount = 0;
-            const targetTokens = 2.4;
-            const targetCarbon = 245;
+            const targetTokens = journeyData?.tokensEarned || 0;
+            const targetCarbon = journeyData?.carbonSaved || 0;
             const tokenInterval = setInterval(() => {
               tokenCount += 0.1;
               carbonCount += 10;
@@ -117,7 +124,10 @@ export default function ProcessingPage({ onNavigate }: ProcessingPageProps) {
             </div>
             <h1 className="text-2xl font-bold text-foreground">Processing Journey</h1>
             <p className="text-muted-foreground text-sm">
-              Validating your metro ticket on Hedera network
+              {journeyData?.fromStation && journeyData?.toStation
+                ? `${journeyData.fromStation} → ${journeyData.toStation}`
+                : 'Validating your metro ticket on Hedera network'
+              }
             </p>
           </div>
 

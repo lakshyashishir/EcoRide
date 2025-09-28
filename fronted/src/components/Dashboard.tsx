@@ -19,6 +19,7 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
+import { useHedera } from '@/hooks/useHedera';
 import {
   calculateTotalImpact,
   formatCarbonAmount,
@@ -34,6 +35,16 @@ interface DashboardProps {
 
 export default function Dashboard({ className = '' }: DashboardProps) {
   const { wallet, loading } = useWallet();
+  const {
+    tokenAssociated,
+    checkingAssociation,
+    checkTokenAssociation,
+    journeys,
+    totalTokens,
+    totalCarbonSaved,
+    totalJourneys,
+    isLoading: hederaLoading
+  } = useHedera();
 
   // Redirect to connection if wallet not connected
   if (!wallet.isConnected) {
@@ -54,13 +65,6 @@ export default function Dashboard({ className = '' }: DashboardProps) {
     );
   }
 
-  const {
-    journeys = [],
-    totalTokens = 0,
-    totalCarbonSaved = 0,
-    totalJourneys = 0,
-  } = {}; 
-
   const displayData = {
     totalTokens,
     totalCarbonSaved,
@@ -73,7 +77,7 @@ export default function Dashboard({ className = '' }: DashboardProps) {
   const tierProgress = getTierProgress(displayData.totalCarbonSaved);
   const insights = getCarbonInsights(displayData.totalCarbonSaved, displayData.totalJourneys);
 
-  if (loading) {
+  if (loading || hederaLoading) {
     return (
       <div className={`space-y-6 ${className}`}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -112,6 +116,50 @@ export default function Dashboard({ className = '' }: DashboardProps) {
 
   return (
     <div className={`space-y-6 ${className}`}>
+      {/* Token Association Status */}
+      {wallet.isConnected && !tokenAssociated && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-amber-800">Token Association Required</p>
+                  <p className="text-xs text-amber-600">
+                    Associate GREEN token with your wallet to receive rewards
+                  </p>
+                </div>
+              </div>
+              <div className="flex space-x-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-amber-300 text-amber-700 hover:bg-amber-100"
+                  onClick={() => wallet.accountId && checkTokenAssociation(wallet.accountId)}
+                  disabled={checkingAssociation}
+                >
+                  {checkingAssociation ? 'Checking...' : 'Refresh'}
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                  onClick={() => {
+                    window.open(
+                      'https://docs.hedera.com/hedera/tutorials/tokens/associate-tokens-to-an-account',
+                      '_blank'
+                    );
+                  }}
+                >
+                  Learn How
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-green-200 bg-green-50">
           <CardContent className="p-6">
@@ -123,6 +171,7 @@ export default function Dashboard({ className = '' }: DashboardProps) {
                 </p>
                 <p className="text-xs text-green-600">
                   +{formatTokenAmount(totalImpact.totalTokensEarned)} earned
+                  {tokenAssociated && ' ✓ Associated'}
                 </p>
               </div>
               <Coins className="w-8 h-8 text-green-600" />
@@ -139,7 +188,7 @@ export default function Dashboard({ className = '' }: DashboardProps) {
                   {formatCarbonAmount(displayData.totalCarbonSaved)}
                 </p>
                 <p className="text-xs text-emerald-600">
-                  vs. car travel
+                  Calculated by DMRC 
                 </p>
               </div>
               <Leaf className="w-8 h-8 text-emerald-600" />

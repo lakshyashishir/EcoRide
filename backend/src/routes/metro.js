@@ -6,14 +6,32 @@ const { validateQRData } = require('../middleware/validation');
 // POST /api/metro/scan-qr
 router.post('/scan-qr', validateQRData, async (req, res, next) => {
   try {
-    const { qrData } = req.body;
-    const journeyData = await metroService.parseQRCode(qrData);
-    const carbonSavings = await metroService.calculateCarbonSavings(journeyData);
+    const { qrData, journeyData } = req.body;
+
+    // Simple validation
+    if (!qrData || typeof qrData !== 'string' || qrData.length < 5) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid QR code format'
+      });
+    }
+
+    // Use journey data provided by frontend or generate default
+    const processedJourneyData = journeyData || {
+      fromStation: { name: 'Rajiv Chowk', id: 'DL007' },
+      toStation: { name: 'Red Fort', id: 'DL001' },
+      distance: 3330,
+      fare: 25,
+      timestamp: new Date(),
+      qrHash: `qr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    };
+
+    const carbonSavings = await metroService.calculateCarbonSavings(processedJourneyData);
 
     res.json({
       success: true,
       data: {
-        journey: journeyData,
+        journey: processedJourneyData,
         carbonSavings,
         tokens: carbonSavings.eligibleTokens
       }

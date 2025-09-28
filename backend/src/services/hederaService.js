@@ -39,20 +39,20 @@ class HederaService {
             this.client = Client.forTestnet();
 
             // Set operator account
-            this.operatorAccount = AccountId.fromString(process.env.HEDERA_ACCOUNT_ID);
-            this.operatorKey = PrivateKey.fromString(process.env.HEDERA_PRIVATE_KEY);
+            this.operatorAccount = AccountId.fromString(process.env.HEDERA_OPERATOR_ACCOUNT_ID);
+            this.operatorKey = PrivateKey.fromStringECDSA(process.env.HEDERA_OPERATOR_PRIVATE_KEY);
 
             this.client.setOperator(this.operatorAccount, this.operatorKey);
 
             // Set existing token and topic IDs if available
-            if (process.env.HTS_TOKEN_ID) {
-                this.greenTokenId = process.env.HTS_TOKEN_ID;
+            if (process.env.GREEN_TOKEN_ID) {
+                this.greenTokenId = process.env.GREEN_TOKEN_ID;
             }
             if (process.env.HCS_TOPIC_ID) {
                 this.carbonTopicId = process.env.HCS_TOPIC_ID;
             }
-            if (process.env.CARBON_REWARDS_CONTRACT) {
-                this.contractId = process.env.CARBON_REWARDS_CONTRACT;
+            if (process.env.GREEN_REWARDS_CONTRACT_ID) {
+                this.contractId = process.env.GREEN_REWARDS_CONTRACT_ID;
             }
 
 
@@ -68,8 +68,8 @@ class HederaService {
      */
     async createGreenToken() {
         try {
-            const tokenName = process.env.HTS_TOKEN_NAME || 'GreenToken';
-            const tokenSymbol = process.env.HTS_TOKEN_SYMBOL || 'GREEN';
+            const tokenName = process.env.GREEN_TOKEN_NAME || 'GreenToken';
+            const tokenSymbol = process.env.GREEN_TOKEN_SYMBOL || 'GREEN';
 
             const tokenCreateTx = new TokenCreateTransaction()
                 .setTokenName(tokenName)
@@ -138,7 +138,7 @@ class HederaService {
             });
 
             const topicMessageTx = new TopicMessageSubmitTransaction()
-                .setTopicId(this.carbonTopicId)
+                .setTopicId(this.carbonTopicId || process.env.HCS_TOPIC_ID)
                 .setMessage(message)
                 .freezeWith(this.client);
 
@@ -328,6 +328,11 @@ class HederaService {
      */
     async healthCheck() {
         try {
+            // Initialize if not already initialized
+            if (!this.client) {
+                await this.initialize();
+            }
+
             const accountBalance = await new AccountBalanceQuery()
                 .setAccountId(this.operatorAccount)
                 .execute(this.client);

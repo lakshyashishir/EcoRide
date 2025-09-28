@@ -25,6 +25,10 @@ class TokenService {
             if (process.env.GREEN_TOKEN_ID) {
                 this.greenTokenId = process.env.GREEN_TOKEN_ID;
                 console.log(`✅ Using existing GREEN token: ${this.greenTokenId}`);
+            } else {
+                // Clear any cached token ID for fresh creation
+                this.greenTokenId = null;
+                console.log(`🔄 No existing token found, ready to create new token`);
             }
 
             this.isInitialized = true;
@@ -34,12 +38,17 @@ class TokenService {
     /**
      * Create the GreenToken using HTS with proper metadata
      */
-    async createGreenToken() {
+    async createGreenToken(forceCreate = false) {
         await this.initialize();
 
-        if (this.greenTokenId) {
+        if (this.greenTokenId && !forceCreate) {
             console.log(`GREEN token already exists: ${this.greenTokenId}`);
             return this.greenTokenId;
+        }
+
+        if (forceCreate) {
+            console.log(`🔄 Force creating new GREEN token...`);
+            this.greenTokenId = null; // Clear existing token ID
         }
 
         try {
@@ -89,6 +98,32 @@ class TokenService {
     }
 
     /**
+     * Check if account is associated with GREEN token
+     */
+    async isTokenAssociated(accountId) {
+        await this.initialize();
+
+        if (!this.greenTokenId) {
+            return false;
+        }
+
+        try {
+            const client = hederaConfig.getClient();
+
+            const accountBalance = await new AccountBalanceQuery()
+                .setAccountId(accountId)
+                .execute(client);
+
+            // accountBalance.tokens is a Map, so we need to use .get() method
+            const tokenBalance = accountBalance.tokens.get(this.greenTokenId);
+            return tokenBalance !== null && tokenBalance !== undefined;
+        } catch (error) {
+            console.error(`❌ Failed to check token association for ${accountId}:`, error.message);
+            return false;
+        }
+    }
+
+    /**
      * Mint GREEN tokens based on carbon savings
      * Formula: tokens = carbonSaved(kg) * 10
      */
@@ -102,6 +137,12 @@ class TokenService {
         try {
             const client = hederaConfig.getClient();
             const treasuryAccount = hederaConfig.getTreasuryAccount();
+
+            // Check if recipient account is associated with the token
+            const isAssociated = await this.isTokenAssociated(recipientAccountId);
+            if (!isAssociated) {
+                throw new Error(`Account ${recipientAccountId} is not associated with GREEN token ${this.greenTokenId}. The user must associate the token in their wallet before receiving rewards.`);
+            }
 
             // Calculate tokens to mint (carbon saved * 10)
             const baseMultiplier = parseInt(process.env.BASE_REWARD_MULTIPLIER) || 10;
@@ -278,6 +319,50 @@ class TokenService {
         } catch (error) {
             console.error(`❌ Failed to associate token with account ${accountId}:`, error.message);
             throw new Error(`Token association failed: ${error.message}`);
+        }
+    }
+
+    /**
+     * Mint initial supply of GREEN tokens to treasury
+     */
+    async mintInitialSupply(amount) {
+        await this.initialize();
+
+        if (!this.greenTokenId) {
+            throw new Error('GREEN token not created yet. Call createGreenToken() first.');
+        }
+
+        try {
+            const client = hederaConfig.getClient();
+            const treasuryAccount = hederaConfig.getTreasuryAccount();
+            const decimals = parseInt(process.env.GREEN_TOKEN_DECIMALS) || 2;
+            const tokensToMint = amount * Math.pow(10, decimals); // Convert to token units
+
+            console.log(`Minting ${amount} GREEN tokens (${tokensToMint} units) to treasury...`);
+
+            // Mint tokens to treasury
+            const tokenMintTx = new TokenMintTransaction()
+                .setTokenId(this.greenTokenId)
+                .setAmount(tokensToMint)
+                .setMaxTransactionFee(new Hbar(5))
+                .freezeWith(client);
+
+            const tokenMintSign = await tokenMintTx.sign(treasuryAccount.privateKey);
+            const tokenMintSubmit = await tokenMintSign.execute(client);
+            const tokenMintRx = await tokenMintSubmit.getReceipt(client);
+
+            console.log(`✅ Successfully minted ${amount} GREEN tokens to treasury`);
+            console.log(`Mint Transaction ID: ${tokenMintSubmit.transactionId}`);
+
+            return {
+                transactionId: tokenMintSubmit.transactionId.toString(),
+                tokensMinted: amount,
+                status: tokenMintRx.status.toString(),
+                tokenId: this.greenTokenId
+            };
+        } catch (error) {
+            console.error('❌ Failed to mint initial supply:', error.message);
+            throw new Error(`Initial mint failed: ${error.message}`);
         }
     }
 

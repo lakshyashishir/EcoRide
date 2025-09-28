@@ -22,7 +22,8 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { useHedera } from '@/hooks/useHedera';
-import { formatCarbonAmount, formatTokenAmount, getCarbonTier } from '@/utils/carbonCalculator';
+import { useEcoRideData } from '@/hooks/useEcoRideData';
+import { formatCarbonAmount, formatTokenAmount, getCarbonTier, getTierProgress } from '@/utils/carbonCalculator';
 
 interface LeaderboardEntry {
   id: string;
@@ -42,31 +43,20 @@ interface LeaderboardProps {
   maxEntries?: number;
 }
 
-// Mock leaderboard data
-const generateMockLeaderboard = (currentUserAccountId?: string): LeaderboardEntry[] => {
-  const mockUsers = [
-    { name: 'EcoWarrior_Delhi', carbon: 15.2, tokens: 152, journeys: 45 },
-    { name: 'GreenCommuter99', carbon: 12.8, tokens: 128, journeys: 38 },
-    { name: 'SustainableRider', carbon: 11.4, tokens: 114, journeys: 42 },
-    { name: 'CleanAirChamp', carbon: 10.9, tokens: 109, journeys: 35 },
-    { name: 'MetroMaster', carbon: 9.7, tokens: 97, journeys: 31 },
-    { name: 'PlanetSaver2024', carbon: 8.8, tokens: 88, journeys: 28 },
-    { name: 'EcoFriendlyUser', carbon: 7.9, tokens: 79, journeys: 25 },
-    { name: 'GreenTransport', carbon: 7.2, tokens: 72, journeys: 22 },
-    { name: 'CarbonNeutral', carbon: 6.5, tokens: 65, journeys: 20 },
-    { name: 'EcoCommuter', carbon: 5.8, tokens: 58, journeys: 18 },
-  ];
+// Fallback when no leaderboard data is available - minimal placeholder
+const getEmptyLeaderboard = (currentUserAccountId?: string): LeaderboardEntry[] => {
+  if (!currentUserAccountId) return [];
 
-  return mockUsers.map((user, index) => ({
-    id: `user_${index}`,
-    accountId: index === 0 && currentUserAccountId ? currentUserAccountId : `0.0.${100000 + index}`,
-    displayName: user.name,
-    carbonSaved: user.carbon,
-    tokensEarned: user.tokens,
-    journeys: user.journeys,
-    tier: getCarbonTier(user.carbon).tier,
-    isCurrentUser: index === 0 && !!currentUserAccountId,
-  }));
+  return [{
+    id: 'current_user_only',
+    accountId: currentUserAccountId,
+    displayName: 'You',
+    carbonSaved: 0,
+    tokensEarned: 0,
+    journeys: 0,
+    tier: getCarbonTier(0).tier,
+    isCurrentUser: true,
+  }];
 };
 
 interface LeaderboardPageProps extends LeaderboardProps {
@@ -80,14 +70,51 @@ export default function Leaderboard({
   onNavigate,
 }: LeaderboardPageProps) {
   const { wallet, totalCarbonSaved, totalTokens, totalJourneys, isConnected } = useHedera();
+  const { leaderboard, systemStats, isLoading, error, refreshData } = useEcoRideData();
   const [selectedPeriod, setSelectedPeriod] = useState<'weekly' | 'monthly' | 'allTime'>(period);
 
   const leaderboardData = useMemo(() => {
-    const mockData = generateMockLeaderboard(isConnected ? wallet.accountId : undefined);
+    // Use real leaderboard data if available
+    if (leaderboard && leaderboard.length > 0) {
+      const realData = leaderboard.slice(0, maxEntries).map((entry) => ({
+        id: entry.id,
+        accountId: entry.userId,
+        displayName: entry.name,
+        carbonSaved: entry.totalCarbonSaved,
+        tokensEarned: entry.totalTokens,
+        journeys: entry.totalJourneys,
+        tier: getCarbonTier(entry.totalCarbonSaved).tier,
+        isCurrentUser: isConnected && entry.userId === wallet.accountId,
+        avatar: entry.avatar,
+      }));
 
-    if (isConnected && totalCarbonSaved > 0) {
-      const userEntry: LeaderboardEntry = {
-        id: 'current_user',
+      // If current user is connected but not in leaderboard, add them
+      if (isConnected && totalCarbonSaved > 0) {
+        const userInLeaderboard = realData.some(entry => entry.accountId === wallet.accountId);
+        if (!userInLeaderboard) {
+          const userEntry: LeaderboardEntry = {
+            id: 'current_user',
+            accountId: wallet.accountId,
+            displayName: 'You',
+            carbonSaved: totalCarbonSaved,
+            tokensEarned: totalTokens,
+            journeys: totalJourneys,
+            tier: getCarbonTier(totalCarbonSaved).tier,
+            isCurrentUser: true,
+          };
+          realData.push(userEntry);
+          // Sort by carbon saved descending
+          realData.sort((a, b) => b.carbonSaved - a.carbonSaved);
+        }
+      }
+
+      return realData.slice(0, maxEntries);
+    }
+
+    // If no leaderboard data and user is connected, show just the user
+    if (isConnected && (totalCarbonSaved > 0 || totalJourneys > 0)) {
+      return [{
+        id: 'current_user_only',
         accountId: wallet.accountId,
         displayName: 'You',
         carbonSaved: totalCarbonSaved,
@@ -95,22 +122,12 @@ export default function Leaderboard({
         journeys: totalJourneys,
         tier: getCarbonTier(totalCarbonSaved).tier,
         isCurrentUser: true,
-      };
-
-      const insertIndex = mockData.findIndex(entry => entry.carbonSaved < totalCarbonSaved);
-      if (insertIndex === -1) {
-        mockData.push(userEntry);
-      } else {
-        mockData.splice(insertIndex, 0, userEntry);
-      }
-
-      return mockData.filter((entry, index, arr) =>
-        !(entry.accountId === wallet.accountId && !entry.isCurrentUser)
-      ).slice(0, maxEntries);
+      }];
     }
 
-    return mockData.slice(0, maxEntries);
-  }, [isConnected, wallet.accountId, totalCarbonSaved, totalTokens, totalJourneys, maxEntries]);
+    // Fallback to empty state
+    return getEmptyLeaderboard(isConnected ? wallet.accountId : undefined);
+  }, [leaderboard, isConnected, wallet.accountId, totalCarbonSaved, totalTokens, totalJourneys, maxEntries]);
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -178,32 +195,46 @@ export default function Leaderboard({
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Star className="w-5 h-5 text-amber-600" />
-              Your Reward Tier
+              Your Carbon Tier
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Badge className="bg-primary text-primary-foreground">Green Starter</Badge>
-              <span className="text-sm text-muted-foreground">
-                {totalTokens}/50 to Eco Warrior
-              </span>
-            </div>
-            <div className="w-full bg-secondary rounded-full h-3">
-              <div
-                className="bg-primary h-3 rounded-full transition-all duration-300"
-                style={{ width: `${Math.min((totalTokens / 50) * 100, 100)}%` }}
-              ></div>
-            </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-primary rounded-full"></div>
-                <span>Basic rewards</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-primary rounded-full"></div>
-                <span>5% extra discounts</span>
-              </div>
-            </div>
+            {(() => {
+              const currentTier = getCarbonTier(totalCarbonSaved);
+              const tierProgress = getTierProgress(totalCarbonSaved);
+
+              return (
+                <>
+                  <div className="flex items-center justify-between">
+                    <Badge className={getTierBadgeColor(currentTier.tier)}>
+                      {currentTier.tier}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {tierProgress.isMaxTier
+                        ? 'Max tier achieved!'
+                        : `${formatCarbonAmount(tierProgress.remaining)} to ${tierProgress.nextTier}`
+                      }
+                    </span>
+                  </div>
+                  <div className="w-full bg-secondary rounded-full h-3">
+                    <div
+                      className="bg-primary h-3 rounded-full transition-all duration-300"
+                      style={{ width: `${tierProgress.progress}%` }}
+                    ></div>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                      <span>{formatCarbonAmount(totalCarbonSaved)} CO₂ saved total</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                      <span>{totalJourneys} eco-friendly journeys</span>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </CardContent>
         </Card>
 

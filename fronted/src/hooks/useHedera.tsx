@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useWallet } from '@/contexts/WalletContext';
+import { apiService } from '@/services/api';
 
 export interface HederaTransaction {
   id: string;
@@ -39,53 +40,9 @@ export interface CarbonJourney {
   verified: boolean;
 }
 
-const demoTokenBalance: TokenBalance[] = [
-  {
-    tokenId: '0.0.123456',
-    symbol: 'GREEN',
-    balance: 1250.75,
-    decimals: 2,
-  },
-];
-
-const demoJourneys: CarbonJourney[] = [
-  {
-    id: '1',
-    fromStation: 'Rajiv Chowk',
-    toStation: 'Connaught Place',
-    distance: 2.5,
-    carbonSaved: 0.425,
-    tokensEarned: 4.25,
-    timestamp: new Date(Date.now() - 86400000).toISOString(),
-    hcsMessageId: '0.0.789-1234567890',
-    verified: true,
-  },
-  {
-    id: '2',
-    fromStation: 'Kashmere Gate',
-    toStation: 'Red Fort',
-    distance: 3.2,
-    carbonSaved: 0.544,
-    tokensEarned: 5.44,
-    timestamp: new Date(Date.now() - 172800000).toISOString(),
-    hcsMessageId: '0.0.789-1234567891',
-    verified: true,
-  },
-  {
-    id: '3',
-    fromStation: 'New Delhi',
-    toStation: 'India Gate',
-    distance: 4.1,
-    carbonSaved: 0.697,
-    tokensEarned: 6.97,
-    timestamp: new Date(Date.now() - 259200000).toISOString(),
-    hcsMessageId: '0.0.789-1234567892',
-    verified: true,
-  },
-];
 
 export const useHedera = () => {
-  const { wallet: walletContext } = useWallet();
+  const walletContext = useWallet();
 
   const [wallet, setWallet] = useState<UserWallet>({
     accountId: '',
@@ -94,11 +51,133 @@ export const useHedera = () => {
     type: null,
   });
 
-  const [tokenBalance, setTokenBalance] = useState<TokenBalance[]>(demoTokenBalance);
+  const [tokenBalance, setTokenBalance] = useState<TokenBalance[]>([]);
   const [transactions, setTransactions] = useState<HederaTransaction[]>([]);
-  const [journeys, setJourneys] = useState<CarbonJourney[]>(demoJourneys);
+  const [journeys, setJourneys] = useState<CarbonJourney[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tokenAssociated, setTokenAssociated] = useState<boolean>(true);
+  const [checkingAssociation, setCheckingAssociation] = useState<boolean>(false);
+
+
+  const loadUserJourneys = useCallback(async (accountId: string) => {
+    try {
+      const messagesResponse = await apiService.getTopicMessages();
+
+      if (messagesResponse.success && messagesResponse.data.messages) {
+
+        const userJourneys = messagesResponse.data.messages
+          .filter((msg: any) => {
+            try {
+              const messageData = JSON.parse(msg.message);
+              return (messageData.userAccountId === accountId) || (messageData.uid === accountId);
+            } catch (e) {
+              return false;
+            }
+          })
+          .map((msg: any, index: number) => {
+            try {
+              const messageData = JSON.parse(msg.message);
+              const isCompact = messageData.jid !== undefined;
+
+              return {
+                id: messageData.journeyId || messageData.jid || `journey_${index}`,
+                fromStation: isCompact ? messageData.journey?.from : messageData.journey?.fromStation || '',
+                toStation: isCompact ? messageData.journey?.to : messageData.journey?.toStation || '',
+                distance: isCompact ? messageData.journey?.dist : messageData.journey?.distance?.value || 0,
+                carbonSaved: isCompact ? parseFloat(messageData.carbon?.kg || '0') : (messageData.carbonCalculation?.carbonSavedKg ? parseFloat(messageData.carbonCalculation.carbonSavedKg) : 0),
+                tokensEarned: isCompact ? messageData.rewards?.tokens : messageData.rewards?.tokensEarned || 0,
+                timestamp: messageData.timestamp || messageData.ts,
+                hcsMessageId: msg.sequenceNumber,
+                verified: true,
+              };
+            } catch {
+              return null;
+            }
+          })
+          .filter((journey: any) => journey !== null);
+
+        setJourneys(userJourneys);
+      }
+    } catch (err) {
+      console.error('Failed to load user journeys:', err);
+    }
+  }, []);
+
+  const loadUserData = useCallback(async (accountId: string) => {
+    if (!accountId) return;
+
+    try {
+      await loadUserJourneys(accountId);
+    } catch (err) {
+      console.error('Failed to load HCS journeys:', err);
+    }
+
+    try {
+      const balanceResponse = await apiService.getTokenBalance(accountId);
+      if (balanceResponse.success) {
+        const tokenData = {
+          tokenId: balanceResponse.data.tokenId,
+          symbol: balanceResponse.data.tokenSymbol,
+          balance: parseFloat(balanceResponse.data.balance),
+          decimals: 2,
+        };
+        setTokenBalance([tokenData]);
+      }
+    } catch (err) {
+      console.error('Failed to load token balance:', err);
+    }
+
+    try {
+      const transfersResponse = await apiService.getUserTokenTransfers(accountId);
+      if (transfersResponse.success && transfersResponse.data.transfers) {
+        const transfers = transfersResponse.data.transfers.map((transfer: any) => {
+          let timestamp;
+          try {
+            if (transfer.consensus_timestamp) {
+              timestamp = new Date(parseFloat(transfer.consensus_timestamp) * 1000).toISOString();
+            } else {
+              timestamp = new Date().toISOString();
+            }
+          } catch (e) {
+            timestamp = new Date().toISOString();
+          }
+
+          return {
+            id: transfer.transaction_id,
+            type: 'token_transfer' as const,
+            amount: transfer.amount / 100,
+            tokenId: transfer.token_id,
+            timestamp,
+            status: 'success' as const,
+            hash: transfer.transaction_hash,
+          };
+        });
+        setTransactions(transfers);
+      }
+    } catch (err) {
+      console.error('Failed to load token transfers:', err);
+    }
+  }, [loadUserJourneys]);
+
+  const checkTokenAssociation = useCallback(async (accountId: string) => {
+    if (!accountId) return;
+
+    setCheckingAssociation(true);
+    try {
+      const response = await apiService.getTokenAssociation(accountId);
+      if (response.success) {
+        setTokenAssociated(response.data.isAssociated);
+      } else {
+        setTokenAssociated(false);
+      }
+    } catch (err) {
+      console.error('Failed to check token association:', err);
+      setTokenAssociated(false);
+    } finally {
+      setCheckingAssociation(false);
+    }
+  }, []);
 
   const connectWallet = useCallback(async (walletType: 'hashpack' | 'metamask') => {
     setIsLoading(true);
@@ -111,26 +190,24 @@ export const useHedera = () => {
         throw new Error('Failed to connect to wallet. Please try again.');
       }
 
-      const mockAccountId = walletType === 'hashpack'
-        ? '0.0.123456'
-        : '0.0.654321';
+      const userAccountId = walletContext.wallet.accountId;
 
       setWallet({
-        accountId: mockAccountId,
+        accountId: userAccountId,
         publicKey: `302a300506032b657003210000${Math.random().toString(16).slice(2, 34)}`,
         connected: true,
         type: walletType,
       });
 
-      setTokenBalance(demoTokenBalance);
-      setJourneys(demoJourneys);
+      await loadUserData(userAccountId);
+      await checkTokenAssociation(userAccountId);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Wallet connection failed');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [loadUserData, checkTokenAssociation, walletContext.wallet.accountId]);
 
   const disconnectWallet = useCallback(() => {
     setWallet({
@@ -142,6 +219,7 @@ export const useHedera = () => {
     setTokenBalance([]);
     setTransactions([]);
     setJourneys([]);
+    setTokenAssociated(false);
     setError(null);
   }, []);
 
@@ -150,51 +228,71 @@ export const useHedera = () => {
     toStation: string;
     distance: number;
     qrData: string;
+    carbonSaved?: number;
+    fare?: number;
+    qrHash?: string;
   }) => {
-    if (!walletContext.isConnected) {
+    if (!walletContext.wallet.isConnected) {
       throw new Error('Wallet not connected. Please connect your wallet first.');
+    }
+
+    if (!tokenAssociated) {
+      throw new Error('GREEN2 token not associated with your account. Please associate the token in your wallet first to receive rewards.');
     }
 
     setIsLoading(true);
     setError(null);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const distanceKm = journeyData.distance;
+      const carbonSavedGrams = journeyData.carbonSaved || Math.round(distanceKm * 154);
+      const tokensEarned = Math.floor((carbonSavedGrams / 1000) * 10);
+      const qrHash = journeyData.qrHash || `qr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      if (Math.random() > 0.95) {
-        throw new Error('Journey submission failed. Please try again.');
-      }
-
-      const carbonSaved = journeyData.distance * 0.138; 
-      const tokensEarned = carbonSaved * 10; 
-
-      const newJourney: CarbonJourney = {
-        id: Date.now().toString(),
+      const journeySubmission = {
+        journeyId: `journey_${Date.now()}`,
         fromStation: journeyData.fromStation,
         toStation: journeyData.toStation,
-        distance: journeyData.distance,
-        carbonSaved,
-        tokensEarned,
-        timestamp: new Date().toISOString(),
-        hcsMessageId: `0.0.789-${Date.now()}`,
+        distance: distanceKm,
+        carbonSaved: carbonSavedGrams,
+        userAddress: walletContext.wallet.accountId,
+        journeyTimestamp: new Date().toISOString(),
+        qrHash: qrHash
+      };
+
+      const submissionResponse = await apiService.submitJourney(journeySubmission);
+
+      if (!submissionResponse.success) {
+        throw new Error(submissionResponse.error || 'Failed to submit journey');
+      }
+
+      const newJourney: CarbonJourney = {
+        id: journeySubmission.journeyId,
+        fromStation: journeyData.fromStation,
+        toStation: journeyData.toStation,
+        distance: distanceKm,
+        carbonSaved: carbonSavedGrams / 1000,
+        tokensEarned: tokensEarned,
+        timestamp: journeySubmission.journeyTimestamp,
+        hcsMessageId: submissionResponse.data?.hcs?.sequenceNumber,
         verified: true,
       };
 
       const newTransaction: HederaTransaction = {
-        id: Date.now().toString(),
-        type: 'token_transfer',
+        id: submissionResponse.data?.contract?.transactionId || Date.now().toString(),
+        type: 'smart_contract',
         amount: tokensEarned,
-        tokenId: '0.0.123456',
+        tokenId: process.env.NEXT_PUBLIC_GREEN_TOKEN_ID || '0.0.6916942',
         timestamp: new Date().toISOString(),
         status: 'success',
-        hash: `0x${Math.random().toString(16).slice(2, 66)}`,
+        hash: submissionResponse.data?.contract?.transactionHash,
       };
 
       setJourneys(prev => [newJourney, ...prev]);
       setTransactions(prev => [newTransaction, ...prev]);
       setTokenBalance(prev =>
         prev.map(token =>
-          token.tokenId === '0.0.123456'
+          token.tokenId === (process.env.NEXT_PUBLIC_GREEN_TOKEN_ID || '0.0.6916942')
             ? { ...token, balance: token.balance + tokensEarned }
             : token
         )
@@ -208,14 +306,14 @@ export const useHedera = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [walletContext.isConnected]);
+  }, [walletContext.wallet.isConnected]);
 
   const redeemTokens = useCallback(async (amount: number, merchantId: string) => {
-    if (!walletContext.isConnected) {
+    if (!walletContext.wallet.isConnected) {
       throw new Error('Wallet not connected');
     }
 
-    const greenBalance = tokenBalance.find(t => t.symbol === 'GREEN')?.balance || 0;
+    const greenBalance = tokenBalance.find(t => t.symbol === 'GREEN2')?.balance || 0;
     if (amount > greenBalance) {
       throw new Error('Insufficient token balance');
     }
@@ -257,10 +355,10 @@ export const useHedera = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [walletContext.isConnected, tokenBalance]);
+  }, [walletContext.wallet.isConnected, tokenBalance]);
 
   const getAccountBalance = useCallback(async () => {
-    if (!walletContext.isConnected) return;
+    if (!walletContext.wallet.isConnected) return;
 
     try {
       setIsLoading(true);
@@ -272,7 +370,7 @@ export const useHedera = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [walletContext.isConnected]);
+  }, [walletContext.wallet.isConnected]);
 
   useEffect(() => {
     const lastWalletType = localStorage.getItem('ecoride-wallet-type') as 'hashpack' | 'metamask' | null;
@@ -293,6 +391,14 @@ export const useHedera = () => {
     }
   }, [wallet.connected, wallet.type]);
 
+  // Load data when wallet connects
+  useEffect(() => {
+    if (walletContext.wallet.isConnected && walletContext.wallet.accountId) {
+      loadUserData(walletContext.wallet.accountId);
+      checkTokenAssociation(walletContext.wallet.accountId);
+    }
+  }, [walletContext.wallet.isConnected, walletContext.wallet.accountId, loadUserData, checkTokenAssociation]);
+
   return {
     wallet,
     tokenBalance,
@@ -300,16 +406,21 @@ export const useHedera = () => {
     journeys,
     isLoading,
     error,
+    tokenAssociated,
+    checkingAssociation,
 
     connectWallet,
     disconnectWallet,
     submitJourney,
     redeemTokens,
     getAccountBalance,
+    checkTokenAssociation,
+    loadUserData,
+    loadUserJourneys,
 
-    totalTokens: tokenBalance.reduce((sum, token) => sum + token.balance, 0),
+    totalTokens: tokenBalance.find(t => t.symbol === 'GREEN2')?.balance || 0,
     totalCarbonSaved: journeys.reduce((sum, journey) => sum + journey.carbonSaved, 0),
     totalJourneys: journeys.length,
-    isConnected: walletContext.isConnected,
+    isConnected: walletContext.wallet.isConnected,
   };
 };

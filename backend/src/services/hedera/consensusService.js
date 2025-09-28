@@ -83,39 +83,29 @@ class ConsensusService {
             // Validate journey data
             this.validateJourneyData(journeyData);
 
-            // Prepare consensus message
+            // Prepare COMPACT consensus message for HCS size limits
             const consensusMessage = {
-                version: '1.0',
-                platform: 'EcoRide',
-                timestamp: new Date().toISOString(),
-                journeyId: journeyData.journeyId,
-                userId: journeyData.userId || 'anonymous',
-                qrCodeHash: journeyData.qrCodeHash,
+                v: '1.0',
+                ts: new Date().toISOString(),
+                jid: journeyData.journeyId,
+                uid: journeyData.userAddress || 'unknown',
+                qr: journeyData.qrCodeHash,
                 journey: {
-                    fromStation: journeyData.fromStation,
-                    toStation: journeyData.toStation,
-                    distance: journeyData.distance,
-                    journeyTime: journeyData.journeyTime,
-                    ticketPrice: journeyData.ticketPrice
+                    from: journeyData.fromStation,
+                    to: journeyData.toStation,
+                    dist: journeyData.distance,
+                    time: journeyData.journeyTimestamp
                 },
-                carbonCalculation: {
-                    metroEmissions: journeyData.metroEmissions,
-                    alternativeEmissions: journeyData.alternativeEmissions,
-                    carbonSaved: journeyData.carbonSaved,
-                    calculationMethod: journeyData.calculationMethod || 'IPCC_2006_GUIDELINES'
+                carbon: {
+                    saved: journeyData.carbonSaved,
+                    kg: (journeyData.carbonSaved / 1000).toFixed(3)
                 },
                 rewards: {
-                    tokensEarned: journeyData.tokensEarned,
-                    rewardFormula: journeyData.rewardFormula || 'carbonSaved(kg) * 10'
+                    tokens: journeyData.tokensEarned,
+                    symbol: 'GREEN2',
+                    tokenId: process.env.GREEN_TOKEN_ID
                 },
-                metadata: {
-                    deviceInfo: journeyData.deviceInfo,
-                    appVersion: journeyData.appVersion || '1.0.0',
-                    networkInfo: {
-                        network: 'hedera-testnet',
-                        mirrorNode: process.env.HEDERA_MIRROR_NODE_URL
-                    }
-                }
+                verified: true
             };
 
             const messageString = JSON.stringify(consensusMessage);

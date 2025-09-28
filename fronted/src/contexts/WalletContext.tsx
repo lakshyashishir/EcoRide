@@ -66,7 +66,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         await connector.init({ logger: 'error' });
         setDAppConnector(connector);
 
-        console.log('DAppConnector initialized successfully');
 
       } catch (error) {
         console.error('Failed to initialize DAppConnector:', error);
@@ -86,10 +85,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         throw new Error('Wallet connector not initialized. Please refresh the page and try again.');
       }
 
-      console.log('Opening wallet connection modal...');
-
       const session = await dAppConnector.openModal();
-      console.log('Connection session:', session);
 
       if (session) {
         const accounts = session.namespaces?.hedera?.accounts || [];
@@ -125,7 +121,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             connector: dAppConnector,
           });
 
-          console.log('Wallet connected successfully:', accountId, 'Type:', walletType);
         } else {
           throw new Error('No accounts found in the connected wallet');
         }
@@ -156,7 +151,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     try {
       if (dAppConnector && wallet.isConnected) {
         await dAppConnector.disconnectAll();
-        console.log('Disconnected all wallet sessions');
       }
     } catch (error) {
       console.warn('Error disconnecting from WalletConnect:', error);

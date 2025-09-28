@@ -9,9 +9,16 @@ import { CheckCircle, Coins, Leaf, TrendingUp, Home, Gift } from 'lucide-react';
 
 interface SuccessPageProps {
   onNavigate: (section: string) => void;
+  journeyData?: {
+    from?: string;
+    to?: string;
+    distance?: number;
+    tokensEarned?: number;
+    carbonSaved?: number;
+  };
 }
 
-export default function SuccessPage({ onNavigate }: SuccessPageProps) {
+export default function SuccessPage({ onNavigate, journeyData }: SuccessPageProps) {
   const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
@@ -19,12 +26,12 @@ export default function SuccessPage({ onNavigate }: SuccessPageProps) {
     return () => clearTimeout(timer);
   }, []);
 
-  const journeyData = {
-    from: 'Rajiv Chowk',
-    to: 'AIIMS',
-    distance: 8.5,
-    tokensEarned: 2.4,
-    carbonSaved: 245,
+  const displayData = {
+    from: journeyData?.from || 'Unknown',
+    to: journeyData?.to || 'Unknown',
+    distance: journeyData?.distance || 0,
+    tokensEarned: journeyData?.tokensEarned || 0,
+    carbonSaved: journeyData?.carbonSaved || 0,
     timeStamp: new Date().toLocaleTimeString(),
   };
 
@@ -52,9 +59,9 @@ export default function SuccessPage({ onNavigate }: SuccessPageProps) {
 
                 <div className="space-y-2">
                   <p className="text-lg font-semibold text-foreground">
-                    {journeyData.from} → {journeyData.to}
+                    {displayData.from} → {displayData.to}
                   </p>
-                  <p className="text-sm text-muted-foreground">{journeyData.distance} km • {journeyData.timeStamp}</p>
+                  <p className="text-sm text-muted-foreground">{displayData.distance} km • {displayData.timeStamp}</p>
                 </div>
 
                 {/* Rewards Earned */}
@@ -63,14 +70,14 @@ export default function SuccessPage({ onNavigate }: SuccessPageProps) {
                     <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center mx-auto mb-2">
                       <Coins className="w-6 h-6 text-primary-foreground" />
                     </div>
-                    <p className="text-2xl font-bold text-primary">+{journeyData.tokensEarned}</p>
+                    <p className="text-2xl font-bold text-primary">+{displayData.tokensEarned}</p>
                     <p className="text-xs text-muted-foreground">GREEN tokens</p>
                   </div>
                   <div className="text-center">
                     <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center mx-auto mb-2">
                       <Leaf className="w-6 h-6 text-secondary-foreground" />
                     </div>
-                    <p className="text-2xl font-bold text-secondary-foreground">{journeyData.carbonSaved}g</p>
+                    <p className="text-2xl font-bold text-secondary-foreground">{displayData.carbonSaved}g</p>
                     <p className="text-xs text-muted-foreground">CO₂ saved</p>
                   </div>
                 </div>
