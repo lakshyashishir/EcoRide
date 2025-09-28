@@ -12,13 +12,14 @@ import WebsiteDashboardPage from '@/components/pages/WebsiteDashboardPage';
 import JourneyHistory from '@/components/JourneyHistory';
 import Leaderboard from '@/components/Leaderboard';
 import CrossChainBridge from '@/components/CrossChainBridge';
+import FraudDetection from '@/components/FraudDetection';
 
 export default function Home() {
   const [currentPage, setCurrentPage] = useState('home');
   const { wallet } = useWallet();
 
   // Protected routes that require wallet connection
-  const protectedRoutes = ['dashboard', 'history', 'rewards', 'leaderboard', 'bridge'];
+  const protectedRoutes = ['dashboard', 'history', 'rewards', 'leaderboard', 'bridge', 'fraud-detection'];
 
   const handleNavigation = (page: string) => {
     // If trying to access protected route without wallet, redirect to home
@@ -68,6 +69,14 @@ export default function Home() {
           <div className="min-h-screen bg-card">
             <div className="container mx-auto px-4 py-12">
               <CrossChainBridge />
+            </div>
+          </div>
+        );
+      case 'fraud-detection':
+        return (
+          <div className="min-h-screen bg-card">
+            <div className="container mx-auto px-4 py-12">
+              <FraudDetection />
             </div>
           </div>
         );

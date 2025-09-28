@@ -48,6 +48,63 @@ const demoTokenBalance: TokenBalance[] = [
   },
 ];
 
+// Anti-fraud detection simulation (would call real API in production)
+async function simulateFraudCheck({ accountId, journeyData }: {
+  accountId: string;
+  journeyData: {
+    fromStation: string;
+    toStation: string;
+    distance: number;
+    carbonSaved: number;
+  };
+}) {
+  // Simulate API call delay
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
+  let fraudScore = 0;
+  let riskFactors: string[] = [];
+
+  // Distance validation
+  if (journeyData.distance < 0.5) {
+    fraudScore += 30;
+    riskFactors.push('Very short distance');
+  } else if (journeyData.distance > 30) {
+    fraudScore += 20;
+    riskFactors.push('Unusually long distance');
+  }
+
+  // Same station check
+  if (journeyData.fromStation === journeyData.toStation) {
+    fraudScore += 40;
+    riskFactors.push('Same origin and destination');
+  }
+
+  // Carbon savings validation
+  const expectedCarbon = journeyData.distance * 0.138;
+  if (journeyData.carbonSaved > expectedCarbon * 1.5) {
+    fraudScore += 15;
+    riskFactors.push('Carbon savings too high');
+  }
+
+  // Account-based risk (simulated)
+  const accountRisk = Math.random() * 20; // Random 0-20
+  fraudScore += accountRisk;
+
+  // Random variation for demo
+  fraudScore += Math.random() * 10;
+
+  const riskLevel = fraudScore < 25 ? 'LOW' : fraudScore < 60 ? 'MEDIUM' : 'HIGH';
+  const approved = fraudScore < 80; // Block if score >= 80
+
+  return {
+    fraudScore: Math.round(fraudScore),
+    riskLevel,
+    approved,
+    riskFactors,
+    reason: approved ? 'Journey approved' : riskFactors.join(', ') || 'High risk detected'
+  };
+}
+
 const demoJourneys: CarbonJourney[] = [
   {
     id: '1',
@@ -99,6 +156,13 @@ export const useHedera = () => {
   const [journeys, setJourneys] = useState<CarbonJourney[]>(demoJourneys);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fraudAnalysis, setFraudAnalysis] = useState<{
+    status: 'idle' | 'analyzing' | 'completed';
+    riskLevel?: string;
+    fraudScore?: number;
+    riskFactors?: string[];
+    approved?: boolean;
+  }>({ status: 'idle' });
 
   const connectWallet = useCallback(async (walletType: 'hashpack' | 'metamask') => {
     setIsLoading(true);
@@ -159,13 +223,48 @@ export const useHedera = () => {
     setError(null);
 
     try {
+      // FRAUD DETECTION: Check journey before processing
+      setFraudAnalysis({ status: 'analyzing' });
+      console.log('🛡️ Running fraud analysis...');
+
+      const carbonSaved = journeyData.distance * 0.138; // Calculate expected carbon savings
+
+      // Call fraud detection API (simulated for demo)
+      const fraudCheckResponse = await simulateFraudCheck({
+        accountId: walletContext.accountId,
+        journeyData: {
+          ...journeyData,
+          carbonSaved
+        }
+      });
+
+      console.log(`🔍 Fraud analysis result: ${fraudCheckResponse.riskLevel} risk (${fraudCheckResponse.fraudScore}/100)`);
+
+      // Update fraud analysis state
+      setFraudAnalysis({
+        status: 'completed',
+        riskLevel: fraudCheckResponse.riskLevel,
+        fraudScore: fraudCheckResponse.fraudScore,
+        riskFactors: fraudCheckResponse.riskFactors,
+        approved: fraudCheckResponse.approved
+      });
+
+      // Block transaction if high risk
+      if (!fraudCheckResponse.approved) {
+        throw new Error(`⚠️ Journey blocked by fraud detection: ${fraudCheckResponse.reason} (Risk Score: ${fraudCheckResponse.fraudScore}/100)`);
+      }
+
+      // Show fraud check results to user
+      if (fraudCheckResponse.fraudScore > 25) {
+        console.warn(`⚠️ Medium risk detected (${fraudCheckResponse.fraudScore}/100) but journey approved`);
+      }
+
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       if (Math.random() > 0.95) {
         throw new Error('Journey submission failed. Please try again.');
       }
 
-      const carbonSaved = journeyData.distance * 0.138; 
       const tokensEarned = carbonSaved * 10; 
 
       const newJourney: CarbonJourney = {
@@ -204,6 +303,7 @@ export const useHedera = () => {
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Journey submission failed');
+      setFraudAnalysis({ status: 'idle' }); // Reset on error
       throw err;
     } finally {
       setIsLoading(false);
@@ -300,6 +400,7 @@ export const useHedera = () => {
     journeys,
     isLoading,
     error,
+    fraudAnalysis,
 
     connectWallet,
     disconnectWallet,

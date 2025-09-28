@@ -6,6 +6,7 @@ require('dotenv').config();
 const metroRoutes = require('./routes/metro');
 const hederaRoutes = require('./routes/hedera');
 const carbonRoutes = require('./routes/carbon');
+const fraudCheckRoutes = require('./api/fraud-check');
 
 const errorHandler = require('./middleware/errorHandler');
 const { rateLimiter, securityHeaders, ddosProtection } = require('./middleware/rateLimiter');
@@ -27,6 +28,7 @@ app.use(rateLimiter);
 app.use('/api/metro', metroRoutes);
 app.use('/api/hedera', hederaRoutes);
 app.use('/api/carbon', carbonRoutes);
+app.use('/api', fraudCheckRoutes);
 
 app.get('/health', (req, res) => {
   res.json({
