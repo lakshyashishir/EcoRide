@@ -109,10 +109,14 @@ export default function QRScanner({ onScanSuccess, triggerButton, inline = false
   const [scanResult, setScanResult] = useState<QRScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [journeySuccess, setJourneySuccess] = useState<{
+    journey: any;
+    fraudAnalysis: any;
+  } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const qrScannerRef = useRef<QrScanner | null>(null);
-  const { submitJourney, isLoading: isSubmitting } = useHedera();
+  const { submitJourney, isLoading: isSubmitting, fraudAnalysis } = useHedera();
   const { wallet } = useWallet();
 
   const [scanAttempts, setScanAttempts] = useState(0);
@@ -226,6 +230,8 @@ export default function QRScanner({ onScanSuccess, triggerButton, inline = false
     if (!scanResult) return;
 
     try {
+      toast.info('🛡️ Validating journey...', { duration: 2000 });
+
       const journey = await submitJourney({
         fromStation: scanResult.fromStation,
         toStation: scanResult.toStation,
@@ -248,7 +254,14 @@ export default function QRScanner({ onScanSuccess, triggerButton, inline = false
       setIsOpen(false);
       setScanResult(null);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to submit journey');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to submit journey';
+
+      // Check if it's a fraud detection error
+      if (errorMessage.includes('fraud detection')) {
+        toast.error(`🚨 ${errorMessage}`, { duration: 6000 });
+      } else {
+        toast.error(errorMessage);
+      }
     }
   };
 
@@ -274,7 +287,101 @@ export default function QRScanner({ onScanSuccess, triggerButton, inline = false
 
   const content = (
     <div className="space-y-4">
-      {!scanResult ? (
+      {journeySuccess ? (
+        // Success Results View
+        <>
+          <Card className="border-green-200 bg-green-50 max-w-5xl">
+            <CardHeader>
+              <CardTitle className="text-xl flex items-center gap-2 text-green-800">
+                <CheckCircle className="w-6 h-6" />
+                Journey Completed Successfully!
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">GREEN Tokens Earned</p>
+                  <p className="text-2xl font-bold text-green-600">{journeySuccess.journey.tokensEarned.toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Carbon Saved</p>
+                  <p className="text-2xl font-bold text-emerald-600">{(journeySuccess.journey.carbonSaved * 1000).toFixed(0)}g CO₂</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Detailed Fraud Analysis Results */}
+          <Card className="border-blue-200 bg-blue-50 max-w-5xl">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2 text-blue-800">
+                🛡️ Security Analysis Report
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Risk Assessment</p>
+                  <Badge variant={
+                    journeySuccess.fraudAnalysis.riskLevel === 'LOW' ? 'default' :
+                    journeySuccess.fraudAnalysis.riskLevel === 'MEDIUM' ? 'secondary' :
+                    'destructive'
+                  } className="text-sm">
+                    {journeySuccess.fraudAnalysis.fraudScore}/100 ({journeySuccess.fraudAnalysis.riskLevel} RISK)
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Verification Status</p>
+                  <Badge variant={journeySuccess.fraudAnalysis.approved ? 'default' : 'destructive'} className="text-sm">
+                    {journeySuccess.fraudAnalysis.approved ? '✅ VERIFIED' : '❌ REJECTED'}
+                  </Badge>
+                </div>
+              </div>
+
+              {journeySuccess.fraudAnalysis.riskFactors && journeySuccess.fraudAnalysis.riskFactors.length > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Analysis Details:</p>
+                  <ul className="text-sm space-y-1">
+                    {journeySuccess.fraudAnalysis.riskFactors.map((factor: string, index: number) => (
+                      <li key={index} className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-orange-400 rounded-full" />
+                        {factor}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="pt-2 border-t text-xs text-muted-foreground">
+                Journey validated by Hedera Agent Kit • Fraud detection powered by rule-based analysis
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex gap-2">
+            <Button
+              onClick={() => {
+                setJourneySuccess(null);
+                onScanSuccess?.(scanResult!);
+                setIsOpen(false);
+              }}
+              className="flex-1 gradient-green text-white"
+            >
+              Complete
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setJourneySuccess(null);
+                setError(null);
+              }}
+              className="flex-1"
+            >
+              Scan Another
+            </Button>
+          </div>
+        </>
+      ) : !scanResult ? (
         <>
           {isScanning && (
             <Card className="max-w-5xl">
@@ -373,6 +480,70 @@ export default function QRScanner({ onScanSuccess, triggerButton, inline = false
             </CardContent>
           </Card>
 
+          {/* Fraud Analysis Card */}
+          {fraudAnalysis.status !== 'idle' && (
+            <Card className={`border max-w-5xl ${
+              fraudAnalysis.status === 'analyzing' ? 'border-blue-200 bg-blue-50' :
+              fraudAnalysis.approved === false ? 'border-red-200 bg-red-50' :
+              fraudAnalysis.riskLevel === 'HIGH' ? 'border-orange-200 bg-orange-50' :
+              fraudAnalysis.riskLevel === 'MEDIUM' ? 'border-yellow-200 bg-yellow-50' :
+              'border-green-200 bg-green-50'
+            }`}>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  {fraudAnalysis.status === 'analyzing' ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                      Agent Analyzing Journey
+                    </>
+                  ) : (
+                    <>
+                      🛡️ Fraud Analysis Complete
+                    </>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 space-y-2">
+                {fraudAnalysis.status === 'analyzing' ? (
+                  <p className="text-xs text-muted-foreground">
+                    Checking journey patterns and account history...
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Risk Score</span>
+                      <Badge variant={
+                        fraudAnalysis.riskLevel === 'LOW' ? 'default' :
+                        fraudAnalysis.riskLevel === 'MEDIUM' ? 'secondary' :
+                        'destructive'
+                      } className="text-xs">
+                        {fraudAnalysis.fraudScore}/100 ({fraudAnalysis.riskLevel})
+                      </Badge>
+                    </div>
+                    {fraudAnalysis.riskFactors && fraudAnalysis.riskFactors.length > 0 && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Risk Factors:</p>
+                        <ul className="text-xs space-y-1">
+                          {fraudAnalysis.riskFactors.map((factor, index) => (
+                            <li key={index} className="flex items-center gap-1">
+                              <div className="w-1 h-1 bg-gray-400 rounded-full" />
+                              {factor}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    <div className="pt-1">
+                      <Badge variant={fraudAnalysis.approved ? 'default' : 'destructive'} className="text-xs">
+                        {fraudAnalysis.approved ? '✅ Approved' : '❌ Blocked'}
+                      </Badge>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {carbonCalculation && (
             <Card className="border-emerald-200 bg-white">
               <CardHeader>
@@ -397,6 +568,19 @@ export default function QRScanner({ onScanSuccess, triggerButton, inline = false
               </CardContent>
             </Card>
           )}
+
+          {/* Fraud Protection Indicator */}
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-blue-600">
+                <CheckCircle className="w-5 h-5" />
+                <span className="text-sm font-medium">🛡️ Fraud Protection Enabled</span>
+              </div>
+              <p className="text-xs text-blue-700 mt-1">
+                This journey will be automatically validated before reward processing
+              </p>
+            </CardContent>
+          </Card>
 
           {!wallet.isConnected ? (
             <Card className="border-orange-200 bg-orange-50">

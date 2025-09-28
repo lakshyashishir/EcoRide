@@ -302,6 +302,7 @@ export const useHedera = () => {
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Journey submission failed');
+      setFraudAnalysis({ status: 'idle' }); // Reset on error
       throw err;
     } finally {
       setIsLoading(false);
