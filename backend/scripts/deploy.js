@@ -1,3 +1,4 @@
+const hre = require("hardhat");
 const { ethers } = require("hardhat");
 const { Client, AccountId, PrivateKey, ContractCreateTransaction, FileCreateTransaction, FileAppendTransaction, Hbar, TokenCreateTransaction, TokenType, TokenSupplyType, TokenId } = require("@hashgraph/sdk");
 const fs = require("fs");
@@ -126,12 +127,12 @@ async function main() {
     console.log(`🔗 GREEN token Solidity address: ${greenTokenSolidityAddress}`);
     console.log(`🔗 Fee collector Solidity address: ${feeCollectorSolidityAddress}`);
 
-    console.log("⚠️  Deploying without constructor parameters for now");
-    console.log("   Will need to set token address and fee collector after deployment");
+    console.log("⚠️  Deploying without constructor parameters to avoid encoding issues");
+    console.log("   Will set token address and fee collector after deployment using setter functions");
 
     const contractCreateTx = new ContractCreateTransaction()
         .setBytecodeFileId(bytecodeFileId)
-        .setGas(2000000)
+        .setGas(3000000)
         .setMaxTransactionFee(new Hbar(50))
         .freezeWith(client);
 
@@ -166,8 +167,10 @@ async function main() {
             hederaEvmTrackCompliant: true
         },
         constructorArgs: {
-            greenTokenAddress: greenTokenId,
-            feeCollector: feeCollector
+            greenTokenAddress: greenTokenSolidityAddress,
+            feeCollector: feeCollectorSolidityAddress,
+            greenTokenId: greenTokenId,
+            feeCollectorId: feeCollector
         },
         verificationUrls: {
             hashscan: `https://hashscan.io/testnet/contract/${contractId}`,

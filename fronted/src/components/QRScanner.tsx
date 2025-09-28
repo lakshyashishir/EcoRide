@@ -18,6 +18,8 @@ interface QRScanResult {
   distance: number;
   timestamp: string;
   qrData: string;
+  carbonSaved?: number;
+  tokensEarned?: number;
 }
 
 interface MetroTicketData {
@@ -231,7 +233,17 @@ export default function QRScanner({ onScanSuccess, triggerButton, inline = false
         qrData: scanResult.qrData,
       });
 
-      onScanSuccess?.(scanResult);
+      // Transform journey result to QRScanResult format for onScanSuccess callback
+      const journeyResult = {
+        fromStation: journey.fromStation,
+        toStation: journey.toStation,
+        distance: journey.distance,
+        timestamp: journey.timestamp,
+        qrData: scanResult.qrData,
+        carbonSaved: journey.carbonSaved * 1000, // Convert kg to grams for ProcessingPage
+        tokensEarned: journey.tokensEarned
+      };
+      onScanSuccess?.(journeyResult);
       toast.success(`Journey submitted! Earned ${journey.tokensEarned.toFixed(2)} GREEN tokens`);
       setIsOpen(false);
       setScanResult(null);

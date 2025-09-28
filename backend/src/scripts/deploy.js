@@ -1,9 +1,10 @@
 /**
  * Deployment Script for EcoRide Hedera Integration
- * This script deploys all necessary Hedera services
+ * This script deploys all necessary Hedera services and smart contracts
  */
 
 const hederaService = require('../services/hederaService');
+const { ethers } = require('hardhat');
 const fs = require('fs');
 const path = require('path');
 
@@ -120,29 +121,146 @@ class Deployment {
 
     async deployContract() {
         try {
-            this.log('Deploying Carbon Rewards smart contract...');
+            this.log('Deploying smart contracts...');
 
-            if (hederaService.contractId) {
-                this.log(`Contract already exists: ${hederaService.contractId}`);
-                this.deploymentConfig.contractId = hederaService.contractId;
+            // Check if contracts are already deployed
+            const existingDeployment = await this.loadExistingDeployment();
+            if (existingDeployment && existingDeployment.contractId) {
+                this.log(`Contract already exists: ${existingDeployment.contractId}`);
+                this.deploymentConfig.contractId = existingDeployment.contractId;
+                this.deploymentConfig.contractAddress = existingDeployment.contractAddress;
                 return;
             }
 
-            // Read contract bytecode (this would be compiled Solidity)
-            const contractPath = path.join(__dirname, '../../contracts/GreenRewards.sol');
+            // Deploy GreenRewards contract
+            await this.deployGreenRewardsContract();
 
-            // In a real deployment, you'd compile the Solidity first
-            this.log('Note: Contract compilation step required before deployment');
-            this.log('Please compile GreenRewards.sol and provide bytecode');
-
-            // For now, we'll skip actual deployment and just log the requirement
-            this.deploymentConfig.contractStatus = 'compilation_required';
-            this.log('Contract deployment prepared (compilation required)');
+            // Deploy GreenTokenOFT contract
+            await this.deployGreenTokenOFTContract();
 
         } catch (error) {
-            this.log(`Failed to deploy contract: ${error.message}`, 'error');
+            this.log(`Failed to deploy contracts: ${error.message}`, 'error');
             throw error;
         }
+    }
+
+    async deployGreenRewardsContract() {
+        try {
+            this.log('Deploying GreenRewards contract...');
+
+            // Get network configuration
+            const network = hre.network.name;
+            const [deployer] = await ethers.getSigners();
+            const deployerAddress = await deployer.getAddress();
+
+            this.log(`Deploying with account: ${deployerAddress}`);
+
+            // Use existing token and fee collector from deployment-info.json
+            const existingDeployment = await this.loadExistingDeployment();
+            const greenTokenAddress = existingDeployment?.greenTokenAddress || "0.0.6916942";
+            const feeCollector = existingDeployment?.feeCollector || "0.0.6915464";
+
+            // Convert Hedera account IDs to EVM addresses
+            const greenTokenNum = parseInt(greenTokenAddress.split('.')[2]);
+            const feeCollectorNum = parseInt(feeCollector.split('.')[2]);
+            
+            const greenTokenEvm = '0x' + '00000000000000000000000000000000' + greenTokenNum.toString(16).padStart(8, '0');
+            const feeCollectorEvm = '0x' + '00000000000000000000000000000000' + feeCollectorNum.toString(16).padStart(8, '0');
+
+            this.log(`Green Token EVM Address: ${greenTokenEvm}`);
+            this.log(`Fee Collector EVM Address: ${feeCollectorEvm}`);
+
+            // Deploy GreenRewards contract
+            const GreenRewards = await ethers.getContractFactory("GreenRewards");
+            const greenRewards = await GreenRewards.deploy(
+                greenTokenEvm,
+                feeCollectorEvm,
+                {
+                    gasLimit: 4000000,
+                    gasPrice: ethers.parseUnits("500", "gwei")
+                }
+            );
+
+            await greenRewards.waitForDeployment();
+            const contractAddress = await greenRewards.getAddress();
+
+            // Convert EVM address back to Hedera contract ID
+            const contractNum = parseInt(contractAddress.slice(-8), 16);
+            const contractId = `0.0.${contractNum}`;
+
+            this.deploymentConfig.contractId = contractId;
+            this.deploymentConfig.contractAddress = contractAddress;
+            this.deploymentConfig.greenTokenAddress = greenTokenAddress;
+            this.deploymentConfig.feeCollector = feeCollector;
+
+            this.log(`GreenRewards contract deployed: ${contractId} (${contractAddress})`);
+
+        } catch (error) {
+            this.log(`Failed to deploy GreenRewards contract: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    async deployGreenTokenOFTContract() {
+        try {
+            this.log('Deploying GreenTokenOFT contract...');
+
+            // Get network configuration
+            const network = hre.network.name;
+            const config = hre.config.networks[network];
+
+            if (!config || !config.layerZeroEndpoint) {
+                this.log('LayerZero endpoint not configured, skipping OFT deployment', 'warning');
+                return;
+            }
+
+            const layerZeroEndpoint = config.layerZeroEndpoint;
+            const [deployer] = await ethers.getSigners();
+
+            // Use the deployed GreenRewards contract address
+            const greenRewardsAddress = this.deploymentConfig.contractAddress || "0x" + "2".repeat(40);
+
+            // Deploy GreenTokenOFT contract
+            const GreenTokenOFT = await ethers.getContractFactory("GreenTokenOFT");
+            const greenTokenOFT = await GreenTokenOFT.deploy(
+                layerZeroEndpoint,
+                greenRewardsAddress,
+                {
+                    gasLimit: 4000000,
+                    gasPrice: ethers.parseUnits("500", "gwei")
+                }
+            );
+
+            await greenTokenOFT.waitForDeployment();
+            const oftAddress = await greenTokenOFT.getAddress();
+
+            // Convert EVM address to Hedera contract ID
+            const oftNum = parseInt(oftAddress.slice(-8), 16);
+            const oftId = `0.0.${oftNum}`;
+
+            this.deploymentConfig.greenTokenOFTId = oftId;
+            this.deploymentConfig.greenTokenOFTAddress = oftAddress;
+            this.deploymentConfig.layerZeroEndpoint = layerZeroEndpoint;
+
+            this.log(`GreenTokenOFT contract deployed: ${oftId} (${oftAddress})`);
+
+        } catch (error) {
+            this.log(`Failed to deploy GreenTokenOFT contract: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    async loadExistingDeployment() {
+        try {
+            const deploymentPath = path.join(__dirname, '../../../deployment-info.json');
+            if (fs.existsSync(deploymentPath)) {
+                const deploymentData = JSON.parse(fs.readFileSync(deploymentPath, 'utf8'));
+                return deploymentData;
+            }
+        } catch (error) {
+            this.log(`Failed to load existing deployment: ${error.message}`, 'warning');
+        }
+        return null;
     }
 
     async verifyDeployment() {
@@ -176,8 +294,25 @@ class Deployment {
 
     async saveDeploymentConfig() {
         try {
-            const configPath = path.join(__dirname, '../../../deployment-config.json');
+            // Save to deployment-info.json (main deployment file)
+            const deploymentPath = path.join(__dirname, '../../../deployment-info.json');
+            const deploymentInfo = {
+                contractAddress: this.deploymentConfig.contractAddress,
+                contractId: this.deploymentConfig.contractId,
+                greenTokenAddress: this.deploymentConfig.greenTokenAddress,
+                feeCollector: this.deploymentConfig.feeCollector,
+                greenTokenOFTAddress: this.deploymentConfig.greenTokenOFTAddress,
+                greenTokenOFTId: this.deploymentConfig.greenTokenOFTId,
+                layerZeroEndpoint: this.deploymentConfig.layerZeroEndpoint,
+                timestamp: new Date().toISOString(),
+                network: this.deploymentConfig.network || 'hedera-testnet'
+            };
 
+            fs.writeFileSync(deploymentPath, JSON.stringify(deploymentInfo, null, 2));
+            this.log(`Deployment info saved to: ${deploymentPath}`);
+
+            // Also save detailed config
+            const configPath = path.join(__dirname, '../../../deployment-config.json');
             const fullConfig = {
                 ...this.deploymentConfig,
                 deploymentLog: this.deploymentLog,
@@ -190,7 +325,7 @@ class Deployment {
             };
 
             fs.writeFileSync(configPath, JSON.stringify(fullConfig, null, 2));
-            this.log(`Deployment configuration saved to: ${configPath}`);
+            this.log(`Detailed deployment configuration saved to: ${configPath}`);
 
         } catch (error) {
             this.log(`Failed to save config: ${error.message}`, 'warning');
@@ -248,11 +383,12 @@ if (require.main === module) {
             await deployment.generateEnvFile();
 
             console.log('\n📋 Next Steps:');
-            console.log('1. Compile smart contracts using Hardhat or Remix');
-            console.log('2. Deploy compiled contracts using the provided scripts');
+            console.log('1. Verify contracts on Hashscan for transparency');
+            console.log('2. Test contract functions using the provided scripts');
             console.log('3. Update .env.production with contract addresses');
             console.log('4. Test all services using the health check endpoint');
             console.log('5. Configure frontend with wallet integration');
+            console.log('6. Set up cross-chain trusted remotes for LayerZero OFT');
 
         })
         .catch((error) => {

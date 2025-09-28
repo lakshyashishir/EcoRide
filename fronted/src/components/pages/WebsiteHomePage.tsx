@@ -11,7 +11,7 @@ import { useHedera } from '@/hooks/useHedera';
 import { formatTokenAmount, formatCarbonAmount } from '@/utils/carbonCalculator';
 
 interface WebsiteHomePageProps {
-  onNavigate: (section: string) => void;
+  onNavigate: (section: string, data?: any) => void;
 }
 
 export default function WebsiteHomePage({ onNavigate }: WebsiteHomePageProps) {
@@ -38,7 +38,19 @@ export default function WebsiteHomePage({ onNavigate }: WebsiteHomePageProps) {
             </div>
 
             {/* Inline QR Scanner below heading */}
-            <QRScanner inline onScanSuccess={() => onNavigate('processing')} />
+            <QRScanner
+              inline
+              onScanSuccess={(result) => {
+                const journeyData = {
+                  fromStation: result.fromStation,
+                  toStation: result.toStation,
+                  distance: result.distance,
+                  carbonSaved: result.carbonSaved || 0,
+                  tokensEarned: result.tokensEarned || 0
+                };
+                onNavigate('processing', journeyData);
+              }}
+            />
 
             
             {wallet.isConnected && (

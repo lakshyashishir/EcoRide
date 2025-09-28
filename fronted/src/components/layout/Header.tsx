@@ -13,8 +13,6 @@ import {
   Trophy,
   Store,
   Settings,
-  Moon,
-  Sun,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import WalletConnect from '@/components/WalletConnect';
@@ -29,7 +27,7 @@ interface HeaderProps {
 
 const navigationItems = [
   { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-  { id: 'scan', label: 'Scan Ticket', icon: QrCode },
+  // { id: 'scan', label: 'Scan Ticket', icon: QrCode },
   { id: 'history', label: 'Journey History', icon: History },
   { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
   { id: 'merchants', label: 'Redeem Tokens', icon: Store },
@@ -109,16 +107,7 @@ export default function Header({ onNavigate, currentSection = 'dashboard' }: Hea
               </div>
             )}
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="w-9 h-9 p-0"
-            >
-              <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-              <span className="sr-only">Toggle theme</span>
-            </Button>
+            
 
             <WalletConnect showBalance={false} />
 
@@ -194,19 +183,7 @@ export default function Header({ onNavigate, currentSection = 'dashboard' }: Hea
                   </nav>
 
                   <div className="pt-4 border-t space-y-2">
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start"
-                      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                    >
-                      {theme === 'dark' ? (
-                        <Sun className="w-4 h-4 mr-3" />
-                      ) : (
-                        <Moon className="w-4 h-4 mr-3" />
-                      )}
-                      {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-                    </Button>
-
+                    
                     <Button
                       variant="ghost"
                       className="w-full justify-start"

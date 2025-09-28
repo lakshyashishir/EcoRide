@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 /**
  * @title GreenRewards - EcoRide Sustainable Transit Rewards
@@ -131,6 +131,7 @@ contract GreenRewards {
     event MerchantRedemption(address indexed user, address indexed merchant, uint256 amount, uint256 fee, string description);
     event MerchantFeeUpdated(uint256 newFeePercent);
     event FeeCollectorUpdated(address newFeeCollector);
+    event GreenTokenAddressUpdated(address oldTokenAddress, address newTokenAddress);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Only owner can call this function");
@@ -430,6 +431,16 @@ contract GreenRewards {
         require(newFeeCollector != address(0), "Invalid address");
         feeCollector = newFeeCollector;
         emit FeeCollectorUpdated(newFeeCollector);
+    }
+
+    /**
+     * @dev Update the GREEN token address (admin function)
+     */
+    function setGreenTokenAddress(address newTokenAddress) external onlyOwner {
+        require(newTokenAddress != address(0), "Invalid token address");
+        address oldTokenAddress = greenTokenAddress;
+        greenTokenAddress = newTokenAddress;
+        emit GreenTokenAddressUpdated(oldTokenAddress, newTokenAddress);
     }
 
     function getMerchantFeeInfo() external view returns (uint256 feePercent, address collector) {

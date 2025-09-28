@@ -104,7 +104,16 @@ export default function ProcessingPage({ onNavigate, journeyData }: ProcessingPa
           currentTime = 0;
         } else {
           clearInterval(interval);
-          setTimeout(() => onNavigate('success'), 800);
+          setTimeout(() => {
+            const successData = {
+              from: journeyData?.fromStation,
+              to: journeyData?.toStation,
+              distance: journeyData?.distance,
+              tokensEarned: journeyData?.tokensEarned,
+              carbonSaved: journeyData?.carbonSaved
+            };
+            onNavigate('success', successData);
+          }, 800);
         }
       }
     }, 100);

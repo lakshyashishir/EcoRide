@@ -594,4 +594,31 @@ router.get('/analytics/system', async (req, res) => {
     }
 });
 
+// Contract information and debug routes
+router.get('/contract/token-address', async (req, res) => {
+    try {
+        const contractTokenAddress = await contractService.getContractTokenAddress();
+        const envTokenId = process.env.GREEN_TOKEN_ID;
+        const contractId = contractService.getContractId();
+
+        res.json({
+            success: true,
+            data: {
+                contractId,
+                contractTokenAddress,
+                envTokenId,
+                match: contractTokenAddress === envTokenId,
+                message: contractTokenAddress === envTokenId
+                    ? 'Contract and environment token addresses match'
+                    : 'WARNING: Contract and environment token addresses do not match!'
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;

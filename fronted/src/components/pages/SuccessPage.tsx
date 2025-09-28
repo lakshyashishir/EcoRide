@@ -12,6 +12,8 @@ interface SuccessPageProps {
   journeyData?: {
     from?: string;
     to?: string;
+    fromStation?: string;
+    toStation?: string;
     distance?: number;
     tokensEarned?: number;
     carbonSaved?: number;
@@ -27,8 +29,8 @@ export default function SuccessPage({ onNavigate, journeyData }: SuccessPageProp
   }, []);
 
   const displayData = {
-    from: journeyData?.from || 'Unknown',
-    to: journeyData?.to || 'Unknown',
+    from: journeyData?.from || journeyData?.fromStation || 'Unknown',
+    to: journeyData?.to || journeyData?.toStation || 'Unknown',
     distance: journeyData?.distance || 0,
     tokensEarned: journeyData?.tokensEarned || 0,
     carbonSaved: journeyData?.carbonSaved || 0,
@@ -96,15 +98,30 @@ export default function SuccessPage({ onNavigate, journeyData }: SuccessPageProp
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">vs. Car journey</span>
-                    <span className="font-medium text-primary">68% less emissions</span>
+                    <span className="font-medium text-primary">
+                      {displayData.carbonSaved > 0 ?
+                        `${Math.round(((displayData.carbonSaved / 1000) / (displayData.distance * 0.21)) * 100)}%` :
+                        '68%'
+                      } less emissions
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Equivalent to</span>
-                    <span className="font-medium text-foreground">0.02 trees planted</span>
+                    <span className="font-medium text-foreground">
+                      {displayData.carbonSaved > 0 ?
+                        `${((displayData.carbonSaved / 1000) / 21.77).toFixed(3)}` :
+                        '0.02'
+                      } trees planted
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Fuel saved</span>
-                    <span className="font-medium text-foreground">0.8L petrol</span>
+                    <span className="font-medium text-foreground">
+                      {displayData.distance > 0 ?
+                        `${(displayData.distance * 0.08).toFixed(1)}L` :
+                        '0.8L'
+                      } petrol
+                    </span>
                   </div>
                 </div>
               </CardContent>

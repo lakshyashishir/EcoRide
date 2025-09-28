@@ -1,5 +1,14 @@
 // Type definitions for Hedera WalletConnect integration
 
+// Extend Window interface to include hashconnect
+declare global {
+  interface Window {
+    hashconnect?: {
+      [key: string]: any;
+    };
+  }
+}
+
 declare module '@hashgraph/hedera-wallet-connect' {
     export class DAppConnector {
       constructor(

@@ -35,18 +35,16 @@ interface DashboardProps {
 
 export default function Dashboard({ className = '' }: DashboardProps) {
   const { wallet, loading } = useWallet();
-  const {
+  const { 
+    totalTokens, 
+    totalCarbonSaved, 
+    totalJourneys, 
+    journeys, 
+    isLoading: hederaLoading,
     tokenAssociated,
-    checkingAssociation,
-    checkTokenAssociation,
-    journeys,
-    totalTokens,
-    totalCarbonSaved,
-    totalJourneys,
-    isLoading: hederaLoading
+    checkTokenAssociation
   } = useHedera();
 
-  // Redirect to connection if wallet not connected
   if (!wallet.isConnected) {
     return (
       <div className={`flex items-center justify-center min-h-[400px] ${className}`}>
@@ -138,9 +136,9 @@ export default function Dashboard({ className = '' }: DashboardProps) {
                   variant="outline"
                   className="border-amber-300 text-amber-700 hover:bg-amber-100"
                   onClick={() => wallet.accountId && checkTokenAssociation(wallet.accountId)}
-                  disabled={checkingAssociation}
+                  disabled={checkTokenAssociation}
                 >
-                  {checkingAssociation ? 'Checking...' : 'Refresh'}
+                  {checkTokenAssociation ? 'Checking...' : 'Refresh'}
                 </Button>
                 <Button
                   size="sm"
@@ -188,7 +186,7 @@ export default function Dashboard({ className = '' }: DashboardProps) {
                   {formatCarbonAmount(displayData.totalCarbonSaved)}
                 </p>
                 <p className="text-xs text-emerald-600">
-                  Calculated by DMRC 
+                  Based on DMRC calculations
                 </p>
               </div>
               <Leaf className="w-8 h-8 text-emerald-600" />

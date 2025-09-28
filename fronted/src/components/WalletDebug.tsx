@@ -14,9 +14,9 @@ export default function WalletDebug() {
   const checkWalletState = () => {
     const info = {
       hasWindow: typeof window !== 'undefined',
-      hasHashconnect: typeof window !== 'undefined' && !!window.hashconnect,
-      hashconnectMethods: typeof window !== 'undefined' && window.hashconnect
-        ? Object.keys(window.hashconnect)
+      hasHashconnect: typeof window !== 'undefined' && !!(window as any).hashconnect,
+      hashconnectMethods: typeof window !== 'undefined' && (window as any).hashconnect
+        ? Object.keys((window as any).hashconnect)
         : [],
       localStorage: {
         connected: localStorage.getItem('wallet_connected'),

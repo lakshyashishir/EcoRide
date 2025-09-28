@@ -264,6 +264,28 @@ class ContractService {
         }
     }
 
+    async getContractTokenAddress() {
+        await this.initialize();
+
+        try {
+            const client = hederaConfig.getClient();
+
+            const contractCallTx = new ContractCallQuery()
+                .setContractId(this.contractId)
+                .setGas(100000)
+                .setFunction('greenTokenAddress')
+                .setMaxQueryPayment(new Hbar(1));
+
+            const contractCallResult = await contractCallTx.execute(client);
+            const tokenAddress = contractCallResult.getAddress(0);
+
+            return tokenAddress;
+        } catch (error) {
+            console.error('❌ Failed to get contract token address:', error.message);
+            throw new Error(`Contract token address query failed: ${error.message}`);
+        }
+    }
+
     getContractId() {
         return this.contractId;
     }
